@@ -44,4 +44,7 @@ export const CONFIG = {
   cavAccelTime: 2,         // 최대속도 도달 시간(초)
   cavArriveDist: 6,
   cavTurnRadiusMult: 20,   // 선회 반경 = 장수유닛 * 20
+  chargeThreshold: 0.9,    // 최대속도의 90%↑ → charge(공격 A→S·방어 보정)
+  chargeDefMult: 1.2,      // charge 중 방어 보정
+  stopScale: 120,          // 저지: 상대 curSpeed 감소율(창 저지 A로 기병 감속→charge 무효)
 } as const

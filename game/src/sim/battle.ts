@@ -170,15 +170,26 @@ function frontageOverlapMen(a: Cohort, b: Cohort): number {
   return overlapPx / CONFIG.spacing
 }
 
-/** attacker → target 근접 피해 1틱. 접전 폭 × 공속 × 공/방 → 전사/부상 분배. */
+/** 병종 최대 이동속도 */
+export const maxSpeed = (kind: Cohort['kind']): number => CONFIG.moveBase * coef(TROOPS[kind].move)
+
+/** 기병이 최대속도 근처 = charge 상태 (doc/04 4.5.3) */
+export const isCharging = (c: Cohort): boolean =>
+  c.kind === 'cavalry' && c.curSpeed >= CONFIG.chargeThreshold * maxSpeed('cavalry')
+
+/** attacker → target 근접 피해 1틱. 접전 폭 × 공속 × 공/방 → 전사/부상. charge·저지 반영. */
 function applyMelee(attacker: Cohort, target: Cohort, overlapMen: number, dt: number): void {
   const atk = TROOPS[attacker.kind]
   const def = TROOPS[target.kind]
   const attackUnits = overlapMen / CONFIG.attackUnit
-  const dps = attackUnits * coef(atk.atkSpeed) * (coef(atk.attack) / coef(def.defense)) * CONFIG.damageScale
+  const atkCoef = isCharging(attacker) ? coef('S') : coef(atk.attack)     // charge: 공격 A→S
+  const defCoef = coef(def.defense) * (isCharging(target) ? CONFIG.chargeDefMult : 1) // charge: 방어 보정
+  const dps = attackUnits * coef(atk.atkSpeed) * (atkCoef / defCoef) * CONFIG.damageScale
   const dmg = Math.min(dps * dt, target.aliveHP)
   target.aliveHP -= dmg
-  target.woundedHP += dmg * (1 - lethalityFrac(atk.lethal)) // 나머지는 전사(영구)
+  target.woundedHP += dmg * (1 - lethalityFrac(atk.lethal))
+  // 저지: 공격자가 상대 속도를 늦춤 → 기병 감속 시 charge 무효. (기병=저지 E=거의 못 늦춤=돌파)
+  target.curSpeed = Math.max(0, target.curSpeed - coef(atk.stop) * CONFIG.stopScale * dt)
 }
 
 // --- 궁병 사격 (doc/03 3.6.2): 정지 시만, 전열 병목 없이 사거리 내 전원 사격 ---
