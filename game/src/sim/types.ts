@@ -50,6 +50,8 @@ export interface Unit {
 }
 
 export type BattlePhase = 'deploy' | 'engage' | 'rout' | 'ended'
+export type Degree = '대승리' | '승리' | '안타까운 승리'
+export interface BattleResult { winner: Side; degree: Degree; ratio: number; winnerMen: number }
 export interface Terrain { kind: string } // 1A 임시(평지). 이후 07 7.3 항목화.
 
 export interface Battle {
@@ -59,4 +61,8 @@ export interface Battle {
   tick: number
   phase: BattlePhase
   rng: Rng
+  initialMen: Record<Side, number> // 정도 산출 기준(초반 병력)
+  loser: Side | null
+  routTime: number
+  result: BattleResult | null
 }

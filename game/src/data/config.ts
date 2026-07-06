@@ -8,7 +8,22 @@ export const CONFIG = {
   // 전투 (doc/03 3.6.2)
   contactSlop: 20,         // 전면 접촉 판정 여유(px)
   attackUnit: 10,          // 폭 10명 = 공격 1단위
-  damageScale: 6,          // 피해 배율(잠정 — 튜닝 대상)
+  damageScale: 6,          // 근접 피해 배율(잠정 — 튜닝 대상)
+
+  // 궁병 사격 (doc/03 3.6.2, doc/07): 전열 병목 없이 사거리 내 전원 사격(정지 시만)
+  rangeBase: 220,          // 사거리 배율 1.0 기준 px
+  rangedScale: 0.05,       // 원거리 피해 배율(잠정)
+
+  // 사기 (doc/03 3.6.1): 0~100 시작 50, 접전 하락, 0 → 도주
+  moraleStart: 50,
+  moraleBaseDrop: 2.5,     // 접전(피격) 중 초당 사기 하락
+  moralePerCasualty: 0.08, // 사상 1명당 사기 하락
+
+  // 도주/종료·정도 (doc/04 4.8)
+  routDuration: 10,        // 도주 페이즈 상한(초)
+  routKillRate: 0.03,      // 도주 중 초당 사상 비율(속수무책)
+  degreeWin: 0.8,          // 잔존 ≥80% 대승리
+  degreeMid: 0.5,          // 잔존 ≥50% 승리 (미만은 안타까운 승리)
 
   // 장수 반경 (doc/03 3.2.1): 통솔·지력 100 → 장수유닛 30배
   generalUnitSize: 10,

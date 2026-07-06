@@ -54,17 +54,23 @@ function buildUnit(side: Side, spec: UnitSpec): Unit {
   cohorts.forEach((c, i) => {
     c.anchor = { x: spec.anchor.x - facingDir.x * stepBack * i, y: spec.anchor.y - facingDir.y * stepBack * i }
   })
-  return { side, morale: 50, general, flag, cohorts }
+  return { side, morale: CONFIG.moraleStart, general, flag, cohorts }
 }
 
 export function createBattle(snap: Snapshot): Battle {
+  const A = buildUnit('A', snap.units.A)
+  const B = buildUnit('B', snap.units.B)
   return {
     terrain: { kind: snap.terrain.kind },
-    units: { A: buildUnit('A', snap.units.A), B: buildUnit('B', snap.units.B) },
+    units: { A, B },
     time: 0,
     tick: 0,
     phase: 'deploy',
     rng: makeRng(snap.seed),
+    initialMen: { A: unitMen(A), B: unitMen(B) },
+    loser: null,
+    routTime: 0,
+    result: null,
   }
 }
 
@@ -175,18 +181,89 @@ function applyMelee(attacker: Cohort, target: Cohort, overlapMen: number, dt: nu
   target.woundedHP += dmg * (1 - lethalityFrac(atk.lethal)) // 나머지는 전사(영구)
 }
 
+// --- 궁병 사격 (doc/03 3.6.2): 정지 시만, 전열 병목 없이 사거리 내 전원 사격 ---
+
+function applyRanged(bow: Cohort, target: Cohort, dt: number): void {
+  const atk = TROOPS[bow.kind]
+  const def = TROOPS[target.kind]
+  const dps = bow.aliveHP * (coef(atk.attack) / coef(def.defense)) * CONFIG.rangedScale
+  const dmg = Math.min(dps * dt, target.aliveHP)
+  target.aliveHP -= dmg
+  target.woundedHP += dmg * (1 - lethalityFrac(atk.lethal)) // 궁=저치명(부상 위주)
+}
+
+function rangedPass(battle: Battle, dt: number): void {
+  const range = CONFIG.rangeBase * coef(TROOPS.bow.range)
+  for (const [side, foe] of [['A', 'B'], ['B', 'A']] as [Side, Side][]) {
+    for (const c of battle.units[side].cohorts) {
+      if (c.kind !== 'bow' || c.target !== null || c.aliveHP <= 0) continue // 이동 중엔 사격 없음
+      const frontC = (c.depth * CONFIG.spacing) / 2
+      let best: Cohort | null = null
+      let bestD = Infinity
+      let inMelee = false
+      for (const e of battle.units[foe].cohorts) {
+        if (e.aliveHP <= 0) continue
+        const frontE = (e.depth * CONFIG.spacing) / 2
+        const anchorD = dist(c.anchor, e.anchor)
+        if (anchorD <= frontC + frontE + CONFIG.contactSlop) { inMelee = true; break } // 근접 접촉 → 사격 불가(근접 취약)
+        const d = anchorD - frontE
+        if (d <= range && d < bestD) { bestD = d; best = e }
+      }
+      if (!inMelee && best) applyRanged(c, best, dt)
+    }
+  }
+}
+
+// --- 사기 & 도주/종료 (doc/03 3.6.1, doc/04 4.8) ---
+
+const unitAlive = (u: Unit): number => u.cohorts.reduce((n, c) => n + c.aliveHP, 0)
+
+function dropMorale(u: Unit, casualties: number, dt: number): void {
+  u.morale = Math.max(0, u.morale - (CONFIG.moraleBaseDrop * dt + casualties * CONFIG.moralePerCasualty))
+}
+
+function startRout(battle: Battle, loser: Side): void {
+  battle.phase = 'rout'
+  battle.loser = loser
+  battle.routTime = 0
+}
+
+function endBattle(battle: Battle): void {
+  const winner: Side = battle.loser === 'A' ? 'B' : 'A'
+  const men = unitMen(battle.units[winner])
+  const ratio = men / battle.initialMen[winner]
+  const degree = ratio >= CONFIG.degreeWin ? '대승리' : ratio >= CONFIG.degreeMid ? '승리' : '안타까운 승리'
+  battle.result = { winner, degree, ratio, winnerMen: men }
+  battle.phase = 'ended'
+}
+
+function stepRout(battle: Battle, dt: number): void {
+  battle.routTime += dt
+  const loser = battle.units[battle.loser as Side]
+  for (const c of loser.cohorts) {
+    c.aliveHP = Math.max(0, c.aliveHP - c.aliveHP * CONFIG.routKillRate * dt) // 도주 중 속수무책
+  }
+  if (battle.routTime >= CONFIG.routDuration) endBattle(battle)
+}
+
 /** 고정 timestep 한 틱. */
 export function step(battle: Battle, dtMs: number): void {
   const dt = dtMs / 1000
   battle.time += dtMs
   battle.tick += 1
+  if (battle.phase === 'ended') return
+  if (battle.phase === 'rout') { stepRout(battle, dt); return }
 
   // 이동/회전
   for (const side of ['A', 'B'] as Side[]) {
     for (const c of battle.units[side].cohorts) stepCohort(c, dt)
   }
 
-  // 전투: 마주보는 병종 쌍의 접전 폭 → 상호 피해
+  const beforeA = unitAlive(battle.units.A)
+  const beforeB = unitAlive(battle.units.B)
+
+  // 궁병 사격 → 근접 전투
+  rangedPass(battle, dt)
   let contact = false
   for (const ca of battle.units.A.cohorts) {
     for (const cb of battle.units.B.cohorts) {
@@ -198,7 +275,17 @@ export function step(battle: Battle, dtMs: number): void {
     }
   }
   if (contact && battle.phase === 'deploy') battle.phase = 'engage'
-  // TODO(D): 사기 → 종료(사기0)·도주
+
+  // 사기: 이번 틱 사상 기반 하락
+  const casA = beforeA - unitAlive(battle.units.A)
+  const casB = beforeB - unitAlive(battle.units.B)
+  if (casA > 0) dropMorale(battle.units.A, casA, dt)
+  if (casB > 0) dropMorale(battle.units.B, casB, dt)
+
+  // 사기 0 → 도주
+  const mA = battle.units.A.morale
+  const mB = battle.units.B.morale
+  if (mA <= 0 || mB <= 0) startRout(battle, mA <= mB ? 'A' : 'B')
 }
 
 // --- 로깅/검증 헬퍼 ---
