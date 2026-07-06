@@ -1,4 +1,5 @@
 import type { TroopKind } from './data/units'
+import type { TerrainKey } from './data/terrain'
 
 // 교전 스냅샷 = 전술 레이어의 입력 (doc/04 4.6, doc/05 5.6.1).
 // v0는 하드코딩. 1:1 대칭, 부대당 방패1000·창600·궁400·기200 + 장수.
@@ -13,7 +14,7 @@ export interface UnitSpec {
 }
 export interface Snapshot {
   seed: number
-  terrain: { kind: string }
+  terrain: TerrainKey
   units: { A: UnitSpec; B: UnitSpec }
 }
 
@@ -26,7 +27,7 @@ const ROSTER: CohortSpec[] = [
 
 export const V0_SNAPSHOT: Snapshot = {
   seed: 20260706,
-  terrain: { kind: 'plain' },
+  terrain: 'plain',
   units: {
     A: {
       anchor: { x: -280, y: 0 },

@@ -14,6 +14,11 @@ export const CONFIG = {
   rangeBase: 220,          // 사거리 배율 1.0 기준 px
   rangedScale: 0.05,       // 원거리 피해 배율(잠정)
 
+  // 지형 — 고지→저지 보정 (doc/04 4.8, doc/07 7.3)
+  hillAttackBonus: 1.2,    // 하향 공격 +20%
+  hillRangeBonus: 1.3,     // 궁병 고지 사거리 +30%
+  // (이동 +30% 내리막은 elevation 그래디언트 필요 — 렌더 붙일 때)
+
   // 사기 (doc/03 3.6.1): 0~100 시작 50, 접전 하락, 0 → 도주
   moraleStart: 50,
   moraleBaseDrop: 2.5,     // 접전(피격) 중 초당 사기 하락

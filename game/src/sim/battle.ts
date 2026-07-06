@@ -1,10 +1,19 @@
-import type { Battle, Cohort, Flag, General, Side, Unit, Vec } from './types'
+import type { Battle, Cohort, Flag, General, Side, Terrain, Unit, Vec } from './types'
 import { makeRng } from './rng'
 import { angleDiff, approachAngle, dist } from './mathutil'
 import type { Snapshot, UnitSpec } from '../snapshot'
 import { CONFIG } from '../data/config'
 import { TROOPS } from '../data/units'
 import { coef, lethalityFrac } from '../data/grades'
+import { TERRAINS } from '../data/terrain'
+
+/** 고지대면 1, 평지 0 (doc/07 7.3) */
+const elevationAt = (terrain: Terrain, p: Vec): number => {
+  for (const h of terrain.hills) {
+    if ((p.x - h.x) ** 2 + (p.y - h.y) ** 2 <= h.radius * h.radius) return 1
+  }
+  return 0
+}
 
 // 전투 코어: 스냅샷 → 상태 + 고정 timestep 틱 (doc/05 5.6.4).
 // 1단계 A: 데이터/틱 뼈대. 1단계 B: 이동/배치·회전·모임펼침·기병 선회·명령반경 gating.
@@ -63,7 +72,7 @@ export function createBattle(snap: Snapshot): Battle {
   const A = buildUnit('A', snap.units.A)
   const B = buildUnit('B', snap.units.B)
   return {
-    terrain: { kind: snap.terrain.kind },
+    terrain: { ...TERRAINS[snap.terrain] },
     units: { A, B },
     time: 0,
     tick: 0,
@@ -144,7 +153,7 @@ const activeWidthMen = (c: Cohort): number => (c.aliveHP / c.depth) * c.spread
  *  - 마주보고(facing 반대) + 전면이 접촉거리 안일 때
  *  - 두 전면 선분을 접촉축(AB 수직)에 투영한 겹침 길이.
  */
-function frontageOverlapMen(a: Cohort, b: Cohort): number {
+function frontageOverlapMen(a: Cohort, b: Cohort, terrain: Terrain): number {
   const fa = { x: Math.cos(a.facing), y: Math.sin(a.facing) }
   const fb = { x: Math.cos(b.facing), y: Math.sin(b.facing) }
   if (fa.x * fb.x + fa.y * fb.y > -0.2) return 0 // 서로 마주보지 않음
@@ -169,7 +178,7 @@ function frontageOverlapMen(a: Cohort, b: Cohort): number {
   const hb = (activeWidthMen(b) * CONFIG.spacing) / 2
 
   const overlapPx = Math.max(0, Math.min(pa + ha, pb + hb) - Math.max(pa - ha, pb - hb))
-  return overlapPx / CONFIG.spacing
+  return Math.min(overlapPx / CONFIG.spacing, terrain.chokeWidth) // 병목(애로/다리) 상한
 }
 
 /** 병종 최대 이동속도 */
@@ -180,13 +189,15 @@ export const isCharging = (c: Cohort): boolean =>
   c.kind === 'cavalry' && c.curSpeed >= CONFIG.chargeThreshold * maxSpeed('cavalry')
 
 /** attacker → target 근접 피해 1틱. 접전 폭 × 공속 × 공/방 → 전사/부상. charge·저지 반영. */
-function applyMelee(attacker: Cohort, target: Cohort, overlapMen: number, dt: number): void {
+function applyMelee(attacker: Cohort, target: Cohort, overlapMen: number, dt: number, terrain: Terrain): void {
   const atk = TROOPS[attacker.kind]
   const def = TROOPS[target.kind]
   const attackUnits = overlapMen / CONFIG.attackUnit
   const atkCoef = isCharging(attacker) ? coef('S') : coef(atk.attack)     // charge: 공격 A→S
   const defCoef = coef(def.defense) * (isCharging(target) ? CONFIG.chargeDefMult : 1) // charge: 방어 보정
-  const dps = attackUnits * coef(atk.atkSpeed) * (atkCoef / defCoef) * CONFIG.damageScale
+  // 고지 → 저지 하향 공격 +20% (doc/04 4.8)
+  const hill = elevationAt(terrain, attacker.anchor) > elevationAt(terrain, target.anchor) ? CONFIG.hillAttackBonus : 1
+  const dps = attackUnits * coef(atk.atkSpeed) * (atkCoef / defCoef) * CONFIG.damageScale * hill
   const dmg = Math.min(dps * dt, target.aliveHP)
   target.aliveHP -= dmg
   target.woundedHP += dmg * (1 - lethalityFrac(atk.lethal))
@@ -206,10 +217,11 @@ function applyRanged(bow: Cohort, target: Cohort, dt: number): void {
 }
 
 function rangedPass(battle: Battle, dt: number): void {
-  const range = CONFIG.rangeBase * coef(TROOPS.bow.range)
+  const baseRange = CONFIG.rangeBase * coef(TROOPS.bow.range)
   for (const [side, foe] of [['A', 'B'], ['B', 'A']] as [Side, Side][]) {
     for (const c of battle.units[side].cohorts) {
       if (c.kind !== 'bow' || c.target !== null || c.aliveHP <= 0) continue // 이동 중엔 사격 없음
+      const range = baseRange * (elevationAt(battle.terrain, c.anchor) > 0 ? CONFIG.hillRangeBonus : 1) // 고지 사거리 +30%
       const frontC = (c.depth * CONFIG.spacing) / 2
       let best: Cohort | null = null
       let bestD = Infinity
@@ -329,11 +341,11 @@ export function step(battle: Battle, dtMs: number): void {
   let contact = false
   for (const ca of battle.units.A.cohorts) {
     for (const cb of battle.units.B.cohorts) {
-      const wMen = frontageOverlapMen(ca, cb)
+      const wMen = frontageOverlapMen(ca, cb, battle.terrain)
       if (wMen <= 0) continue
       contact = true
-      applyMelee(ca, cb, wMen, dt)
-      applyMelee(cb, ca, wMen, dt)
+      applyMelee(ca, cb, wMen, dt, battle.terrain)
+      applyMelee(cb, ca, wMen, dt, battle.terrain)
     }
   }
   if (contact && battle.phase === 'deploy') battle.phase = 'engage'

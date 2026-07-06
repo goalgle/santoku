@@ -54,7 +54,13 @@ export interface Unit {
 export type BattlePhase = 'deploy' | 'engage' | 'rout' | 'ended'
 export type Degree = '대승리' | '승리' | '안타까운 승리'
 export interface BattleResult { winner: Side; degree: Degree; ratio: number; winnerMen: number }
-export interface Terrain { kind: string } // 1A 임시(평지). 이후 07 7.3 항목화.
+
+export interface Hill { x: number; y: number; radius: number } // 고지대
+export interface Terrain {
+  name: string
+  hills: Hill[]         // 고지 → 저지 공격/궁 사거리 보정
+  chokeWidth: number    // 접전 폭 상한(명). Infinity면 병목 없음 (다리·애로)
+}
 
 export interface Battle {
   terrain: Terrain
