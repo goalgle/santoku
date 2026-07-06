@@ -43,10 +43,12 @@ export class Blob {
   private routT = 0
   private fleeDir = { x: 0, y: 0 }
   private routKillAcc = 0
+  private readonly start: { x: number; y: number; facing: number }
 
   constructor(opts: BlobOptions) {
     this.anchor = { x: opts.x, y: opts.y }
     this.facing = opts.facing
+    this.start = { x: opts.x, y: opts.y, facing: opts.facing }
     this.rows = opts.rows
     this.spacing = opts.spacing
     this.full = Math.max(1, Math.floor(opts.men / opts.condense))
@@ -114,6 +116,8 @@ export class Blob {
     this.routT = 0
     this.target = null
     this.spread = 1
+    this.anchor = { x: this.start.x, y: this.start.y } // 시작 위치·방향 복원
+    this.facing = this.start.facing
     for (let i = 0; i < this.sprites.length; i++) { this.death[i] = null; this.sprites[i].alpha = 1 }
   }
 

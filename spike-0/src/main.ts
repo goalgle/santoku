@@ -33,14 +33,8 @@ async function main() {
   ]
   for (const b of blobs) world.addChild(b.container)
 
-  // 자동 배회: 손 안 대도 이동(모임→펼침)이 보이게 (도주 중인 부대는 제외)
-  let wanderT = 3500
-  const wander = () => {
-    if (!blobs[0].isRouting) blobs[0].moveTo(-(120 + Math.random() * 240), (Math.random() - 0.5) * 340)
-    if (!blobs[1].isRouting) blobs[1].moveTo(120 + Math.random() * 240, (Math.random() - 0.5) * 340)
-  }
-
-  // 더블탭 → ★도주 / 키: c=중앙 돌격(접전) k=사망버스트 f=도주 r=리셋
+  // 두 대열은 마주본 채 정지. c=접점으로 이동해 멈춤 / d=푸른 사망 / k=붉은 사망 / f=도주 / r=리셋
+  //  (배회 없음 — 정확히 보기 위해 고정)
   let lastTap = 0
   app.canvas.addEventListener('pointerdown', () => {
     const now = performance.now() // 렌더/입력용 — 시뮬 아님
@@ -49,36 +43,21 @@ async function main() {
   })
   addEventListener('keydown', (e) => {
     if (e.key === 'r') blobs.forEach((b) => b.reset())
-    if (e.key === 'k') blobs.forEach((b) => b.killFront(10)) // 전면 사망 10명 → 전면부에서 10개 폴짝
+    if (e.key === 'c') { blobs[0].moveTo(-64, 0); blobs[1].moveTo(64, 0) } // 접점으로 이동 후 멈춤
+    if (e.key === 'd') blobs[0].killFront(10) // 푸른 대열 전면 사망
+    if (e.key === 'k') blobs[1].killFront(10) // 붉은 대열 전면 사망
     if (e.key === 'f') blobs.forEach((b) => b.rout())
-    if (e.key === 'c') { blobs[0].moveTo(-30, 0); blobs[1].moveTo(30, 0) } // 중앙 돌격
   })
 
-  // 접전 연출: 두 덩어리가 붙으면 매 틱 소수 사망 → 다발적 팝(sim은 '숫자'만, 연출은 렌더)
-  let combatAcc = 0
-
   app.ticker.add((t) => {
-    wanderT += t.deltaMS
-    if (wanderT > 3800) { wanderT = 0; wander() }
-
-    const near = Math.hypot(blobs[0].anchor.x - blobs[1].anchor.x, blobs[0].anchor.y - blobs[1].anchor.y) < 80
-    const inCombat = near && !blobs.some((b) => b.isRouting)
-    if (inCombat) {
-      combatAcc += t.deltaMS
-      while (combatAcc > 60) { // ~33명/s 씩 전면부에서 사망
-        combatAcc -= 60
-        blobs.forEach((b) => b.killFront(2))
-      }
-    } else combatAcc = 0
-
     for (const b of blobs) b.update(t.deltaMS)
 
     const sprites = blobs.reduce((n, b) => n + b.spriteCount, 0)
-    const state = blobs.some((b) => b.isRouting) ? '  [도주]' : inCombat ? '  [접전]' : ''
+    const state = blobs.some((b) => b.isRouting) ? '  [도주]' : ''
     hud.textContent =
       'santoku · spike-0 — 덩어리 렌더 검증\n' +
       `FPS ${Math.round(t.FPS)}    sprites ${sprites}${state}\n` +
-      '드래그=이동 휠/핀치=줌 · c=돌격(접전) 더블탭/f=도주 k=사망 r=리셋'
+      'c=접점 이동  d=푸른 사망  k=붉은 사망  f=도주  r=리셋  (드래그=이동 휠/핀치=줌)'
   })
 }
 
