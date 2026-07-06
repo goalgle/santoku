@@ -41,6 +41,7 @@
 - [x] **전술 구현 설계**(`doc/05` 5.6) — 헤드리스 결정적 sim + PixiJS 렌더 분리, 모듈 4(data/sim/render/input), 데이터 모델(Battle/Unit/Cohort/General/Flag), 틱 루프, **핵심 난제 3(접전 폭 기하·덩어리 이동·기병)**, 빌드 순서.
 - [~] **0단계 스파이크 착수** — `spike-0/` (PixiJS v8+Vite+TS). 덩어리 렌더·facing·이동(모임/펼침)·사상자 수축·핀치줌 구현. **데스크탑 4000 스프라이트@120fps 확인**(GO). 남음: **모바일 실기 성능·손맛 확인**(`cd spike-0 && npm run dev`, 폰에서 LAN 접속). ⚠️ 던져버리는 실험 — 진짜 코드베이스는 별도로 깨끗이 시작.
   - 확인된 원리: **시뮬 비용=O(부대 수), 렌더=O(스프라이트)** — 스프라이트 많아도 전투 연산 부하 극소(덩어리 단위 시뮬의 이득). 스프라이트에 로직 금지.
+  - **라이브 배포: https://goalgle.github.io/santoku/** — `main`에 `spike-0/**` 푸시 시 GitHub Actions(`.github/workflows/deploy.yml`) 자동 빌드·배포. Vite base='/santoku/'(빌드 시).
 - [ ] **07 데이터 채우기** — 등급→계수 환산·부대 규모 등 **수치** 1차안 (🟡 골격 확정, 수치 OPEN)
 
 ### 확정 요약 (장수 시스템 — 2026-06-30~07-01)

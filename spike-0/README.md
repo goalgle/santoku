@@ -12,7 +12,11 @@
 - [ ] **핀치-줌 + 팬** (모바일)
 - [ ] **성능**: 스프라이트 개수 대비 FPS (모바일 상한 감)
 
-## 실행
+## 🌐 라이브 배포
+**https://goalgle.github.io/santoku/**
+`main` 에 `spike-0/**` 가 푸시되면 GitHub Actions([.github/workflows/deploy.yml](../.github/workflows/deploy.yml))가 자동 빌드·배포한다.
+
+## 실행 (로컬)
 ```bash
 cd spike-0
 npm install
