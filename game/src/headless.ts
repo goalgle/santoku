@@ -1,33 +1,30 @@
-import { createBattle, step, isCharging, maxSpeed } from './sim/battle'
+import { createBattle, step } from './sim/battle'
 import { V0_SNAPSHOT } from './snapshot'
 import type { Battle } from './sim/types'
 
-// 1단계 E(1/2) 헤드리스: 기병 charge(최대속도→공격 S) + 저지 카운터(창 저지 A로 감속→charge 무효).
+// 1단계 E(2/2) 헤드리스: 장수 일기토 · HP0→휴식·리젠·재출진 · 근접 지속→사기↑.
 
 const DT = 1000 / 30
 const r0 = (n: number) => Math.round(n)
 const runFor = (b: Battle, sec: number) => { for (let i = 0; i < Math.round((sec * 1000) / DT); i++) step(b, DT) }
 
-// 기병이 런웨이(-600→)에서 가속해 targetIdx 병종에 돌격. 속도/charge/사상 관찰.
-function chargeRun(label: string, targetIdx: number) {
-  const b: Battle = createBattle(V0_SNAPSHOT)
-  const cav = b.units.A.cohorts[3] // A 기병
-  const tgt = b.units.B.cohorts[targetIdx]
-  cav.anchor = { x: -600, y: 0 }; cav.facing = 0; cav.target = { x: 40, y: 0 } // 긴 런웨이 + 밀고 들어감
-  tgt.anchor = { x: 0, y: 0 }; tgt.facing = Math.PI; tgt.target = null
-  const startTgt = tgt.aliveHP
+console.log('== 1단계 E (2/2) — 장수 일기토·휴식·리젠·사기 buff ==\n')
 
-  console.log(`\n[${label}]  최대속도=${r0(maxSpeed('cavalry'))}  charge 임계=${r0(0.9 * maxSpeed('cavalry'))}`)
-  console.log('  t(s) | 기병속도 charge | 적 aliveHP')
-  for (let s = 0; s <= 6; s++) {
-    if (s > 0) runFor(b, 1)
-    console.log(`   ${s}  | ${String(r0(cav.curSpeed)).padStart(6)}  ${isCharging(cav) ? 'YES' : ' no'}   | ${String(r0(tgt.aliveHP)).padStart(6)}`)
-  }
-  console.log(`  → 적 사상 ${r0(startTgt - tgt.aliveHP)}`)
+const b = createBattle(V0_SNAPSHOT)
+const gA = b.units.A.general
+const gB = b.units.B.general
+gA.might = 85; gB.might = 65 // A가 더 강함
+gA.pos = { x: -20, y: 0 }; gB.pos = { x: 20, y: 0 } // 근거리(≤45) → 일기토
+b.units.A.flag.pos = { x: -120, y: 0 }; b.units.B.flag.pos = { x: 120, y: 0 } // 휴식 복귀 지점 가까이
+
+console.log(`무력 A=${gA.might} vs B=${gB.might}  (일기토 거리 ${r0(45)})`)
+console.log('t(s) | A장수 hp/상태     | B장수 hp/상태     | 사기A/B')
+for (let s = 0; s <= 30; s += 2) {
+  if (s > 0) runFor(b, 2)
+  console.log(
+    ` ${String(s).padStart(2)}  | ${String(r0(gA.hp)).padStart(3)} ${gA.state.padEnd(8)} | ${String(r0(gB.hp)).padStart(3)} ${gB.state.padEnd(8)} | ${r0(b.units.A.morale)}/${r0(b.units.B.morale)}`,
+  )
 }
 
-console.log('== 1단계 E (1/2) — 기병 charge & 저지 카운터 ==')
-chargeRun('vs 방패병 (저지 B)', 0) // 약한 저지 → charge 유지 오래
-chargeRun('vs 창병 (저지 A)', 1)   // 강한 저지 → 더 빨리 감속 → charge 무효
-
-console.log('\n요약: 런웨이에서 최대속도 도달 → 충돌 시 charge(공격 S). 창병(저지 A)에 붙으면 더 빨리 감속돼 charge가 꺼진다.')
+console.log('\n확인: B 장수(약함) HP0 → 휴식 → 군기 복귀·리젠 → 재출진(out). 근접 10초 지속 → 사기 +5(50→55).')
+console.log('(생사 판정 = 전투 종료 시 HP≥50% 대기 / 미만 부상·사망 — endBattle에 연결, D의 도주 종료에서 발동)')

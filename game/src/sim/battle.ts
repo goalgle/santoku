@@ -39,6 +39,8 @@ function buildUnit(side: Side, spec: UnitSpec): Unit {
     maxHp: spec.general.hp,
     state: 'out',
     pos: { ...spec.anchor },
+    meleeTime: 0,
+    boostGiven: false,
   }
   const flag: Flag = {
     pos: { ...spec.anchor },
@@ -245,7 +247,56 @@ function endBattle(battle: Battle): void {
   const ratio = men / battle.initialMen[winner]
   const degree = ratio >= CONFIG.degreeWin ? '대승리' : ratio >= CONFIG.degreeMid ? '승리' : '안타까운 승리'
   battle.result = { winner, degree, ratio, winnerMen: men }
+  // 장수 생사: 종료 시점 HP비 ≥50% → 대기(재출전) / 미만 → 부상·사망 (doc/03 3.6.1, 07 7.1)
+  for (const s of ['A', 'B'] as Side[]) {
+    const g = battle.units[s].general
+    if (g.state === 'out' || g.state === 'rest') {
+      g.state = g.hp / g.maxHp >= CONFIG.generalStandbyHp ? 'standby' : 'lost'
+    }
+  }
   battle.phase = 'ended'
+}
+
+// --- 장수 (doc/07 7.1): 일기토 · HP 0→휴식·리젠 · 근접 지속→사기↑ ---
+
+function duel(attacker: Unit['general'], target: Unit['general'], dt: number): void {
+  target.hp -= CONFIG.duelBase * (attacker.might / 100) * dt // 무력 기반
+}
+
+function handleGeneral(unit: Unit, dt: number): void {
+  const g = unit.general
+  if (g.state === 'out' && g.hp <= 0) {
+    g.hp = 0; g.state = 'rest'; g.meleeTime = 0 // HP 0 → 부대군기로 휴식
+  } else if (g.state === 'rest') {
+    const f = unit.flag.pos
+    const dx = f.x - g.pos.x, dy = f.y - g.pos.y, d = Math.hypot(dx, dy)
+    if (d > 2) {
+      const s = Math.min(d, CONFIG.generalMoveSpeed * dt)
+      g.pos.x += (dx / d) * s; g.pos.y += (dy / d) * s
+    } else {
+      g.hp = Math.min(g.maxHp, g.hp + CONFIG.generalRegen * dt) // 리젠
+      if (g.hp >= g.maxHp) g.state = 'out' // 재출진
+    }
+  }
+}
+
+function stepGenerals(battle: Battle, dt: number): void {
+  const A = battle.units.A, B = battle.units.B
+  const gA = A.general, gB = B.general
+  // 일기토: 둘 다 출진 & 근거리
+  if (gA.state === 'out' && gB.state === 'out' && dist(gA.pos, gB.pos) <= CONFIG.generalRange) {
+    duel(gA, gB, dt); duel(gB, gA, dt)
+    for (const u of [A, B]) {
+      const g = u.general
+      g.meleeTime += dt // 근접 지속 → 사기 1회↑ (기본 규칙)
+      if (!g.boostGiven && g.meleeTime >= CONFIG.generalMeleeForMorale) {
+        u.morale = Math.min(100, u.morale + CONFIG.generalMoraleBoost)
+        g.boostGiven = true
+      }
+    }
+  }
+  handleGeneral(A, dt)
+  handleGeneral(B, dt)
 }
 
 function stepRout(battle: Battle, dt: number): void {
@@ -286,6 +337,9 @@ export function step(battle: Battle, dtMs: number): void {
     }
   }
   if (contact && battle.phase === 'deploy') battle.phase = 'engage'
+
+  // 장수: 일기토·휴식/리젠·근접 지속 사기 buff
+  stepGenerals(battle, dt)
 
   // 사기: 이번 틱 사상 기반 하락
   const casA = beforeA - unitAlive(battle.units.A)

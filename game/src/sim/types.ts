@@ -21,7 +21,7 @@ export interface Cohort {
   curSpeed: number   // 현재 속도(기병 가속용). px/s
 }
 
-export type GeneralState = 'out' | 'rest' | 'standby' // 출진/휴식/대기
+export type GeneralState = 'out' | 'rest' | 'standby' | 'lost' // 출진/휴식/대기/부상·사망
 export interface General {
   command: number  // 통솔
   might: number    // 무력
@@ -30,6 +30,8 @@ export interface General {
   maxHp: number
   state: GeneralState
   pos: Vec
+  meleeTime: number   // 근접 지속 누적(초) → 사기↑ 조건
+  boostGiven: boolean // 이번 전투 사기 buff 지급 여부
 }
 
 /** 부대군기(= 깃발병). 이동 보병 1/2, 명령 반경, 파괴 가능. */

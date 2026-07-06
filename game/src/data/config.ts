@@ -19,6 +19,15 @@ export const CONFIG = {
   moraleBaseDrop: 2.5,     // 접전(피격) 중 초당 사기 하락
   moralePerCasualty: 0.08, // 사상 1명당 사기 하락
 
+  // 장수 (doc/07 7.1)
+  duelBase: 9,             // 일기토 피해 배율(무력 기반)
+  generalRange: 45,        // 장수 근접 교전 거리(px)
+  generalRegen: 12,        // 휴식 시 초당 HP 회복
+  generalMoveSpeed: 100,   // 장수 이동(휴식 복귀)
+  generalMeleeForMorale: 10, // 근접 지속 N초 → 사기 1회↑ (기본 규칙)
+  generalMoraleBoost: 5,
+  generalStandbyHp: 0.5,   // 종료 시 HP비 ≥ → 대기(재출전) / 미만 → 부상·사망
+
   // 도주/종료·정도 (doc/04 4.8)
   routDuration: 10,        // 도주 페이즈 상한(초)
   routKillRate: 0.03,      // 도주 중 초당 사상 비율(속수무책)
