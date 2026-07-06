@@ -1,13 +1,13 @@
-name: Deploy spike-0 to GitHub Pages
+name: Deploy game to GitHub Pages
 
-# main 에 푸시되면 spike-0 을 빌드해 GitHub Pages 로 자동 배포.
-# (배포 URL: https://goalgle.github.io/santoku/)
+# main 에 푸시되면 game(전술 렌더)을 빌드해 GitHub Pages 로 자동 배포.
+# (배포 URL: https://goalgle.github.io/santoku/)  · spike-0는 종결(리포에만 보존)
 
 on:
   push:
     branches: [main]
     paths:
-      - 'spike-0/**'
+      - 'game/**'
       - '.github/workflows/deploy.yml'
   workflow_dispatch:
 
@@ -25,19 +25,19 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: spike-0
+        working-directory: game
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
-          cache-dependency-path: spike-0/package-lock.json
+          cache-dependency-path: game/package-lock.json
       - run: npm ci
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: spike-0/dist
+          path: game/dist
 
   deploy:
     needs: build

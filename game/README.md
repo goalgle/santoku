@@ -43,4 +43,13 @@ npm run typecheck
 - [x] **D** 궁병 사격(정지·사거리·근접 시 불가) + 사기(접전 하락) + 종료(사기0)·도주(10s)·승리 정도
 - [x] **E** 기병 charge(+저지 카운터) + 장수(일기토·HP0→휴식·리젠·재출진·근접 사기 buff·생사 판정)
 - [x] **F** 고지→저지 공격 +20%·궁 사거리 +30% + 애로 병목(접전 폭 제한) + 지형 템플릿 3종
-- [ ] **렌더(PixiJS) 붙이기** — spike-0 표현을 이 sim 상태에 연결 (← 다음, 여기서 처음 눈으로 봄)
+- [x] **렌더(PixiJS) 붙이기** — sim 상태를 스프라이트로. `npm run dev` / 라이브 배포.
+
+## 실행 (렌더 — 화면)
+```bash
+npm run dev              # http://localhost:5173  (폰: http://<맥IP>:5173)
+```
+- 시나리오 선택: `?s=advance|charge|duel|hill|defile` (기본 advance)
+- **space**=일시정지(액티브 포즈) · 드래그=이동 · 휠/핀치=줌
+- `src/render/`(blobView·camera) + `src/web/main.ts`(Pixi 부트스트랩 + Director 재생).
+- **라이브: https://goalgle.github.io/santoku/** (main에 `game/**` 푸시 시 자동 배포)
