@@ -28,8 +28,8 @@ async function main() {
   const rows = 10
   const spacing = 12
   const blobs = [
-    new Blob({ men: 2000, condense: 8, rows, spacing, color: 0x5599ff, x: -280, y: 0, facing: Math.PI / 2, texture: soldierTex }),
-    new Blob({ men: 2000, condense: 8, rows, spacing, color: 0xff6655, x: 280, y: 0, facing: -Math.PI / 2, texture: soldierTex }),
+    new Blob({ men: 2000, condense: 1, rows, spacing, color: 0x5599ff, x: -280, y: 0, facing: Math.PI / 2, texture: soldierTex }),
+    new Blob({ men: 2000, condense: 1, rows, spacing, color: 0xff6655, x: 280, y: 0, facing: -Math.PI / 2, texture: soldierTex }),
   ]
   for (const b of blobs) world.addChild(b.container)
 
