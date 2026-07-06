@@ -33,22 +33,24 @@ async function main() {
   ]
   for (const b of blobs) world.addChild(b.container)
 
-  // 자동 배회: 손 안 대도 이동(모임→펼침)이 보이게
+  // 자동 배회: 손 안 대도 이동(모임→펼침)이 보이게 (도주 중인 부대는 제외)
   let wanderT = 3500
   const wander = () => {
-    blobs[0].moveTo(-(120 + Math.random() * 240), (Math.random() - 0.5) * 340)
-    blobs[1].moveTo(120 + Math.random() * 240, (Math.random() - 0.5) * 340)
+    if (!blobs[0].isRouting) blobs[0].moveTo(-(120 + Math.random() * 240), (Math.random() - 0.5) * 340)
+    if (!blobs[1].isRouting) blobs[1].moveTo(120 + Math.random() * 240, (Math.random() - 0.5) * 340)
   }
 
-  // 더블탭/더블클릭 → 사상자 -10%(양끝부터 수축) / 'r' = 리셋
+  // 더블탭/더블클릭 → ★도주(대형 붕괴·흩어짐 후퇴) / 'k' = 사상자 -10% / 'r' = 리셋
   let lastTap = 0
   app.canvas.addEventListener('pointerdown', () => {
     const now = performance.now() // 렌더/입력용 — 시뮬 아님
-    if (now - lastTap < 300) blobs.forEach((b) => b.kill(0.1))
+    if (now - lastTap < 300) blobs.forEach((b) => b.rout())
     lastTap = now
   })
   addEventListener('keydown', (e) => {
     if (e.key === 'r') blobs.forEach((b) => b.reset())
+    if (e.key === 'k') blobs.forEach((b) => b.kill(0.1))
+    if (e.key === 'f') blobs.forEach((b) => b.rout())
   })
 
   app.ticker.add((t) => {
@@ -57,10 +59,11 @@ async function main() {
     for (const b of blobs) b.update(t.deltaMS)
 
     const sprites = blobs.reduce((n, b) => n + b.spriteCount, 0)
+    const routing = blobs.some((b) => b.isRouting) ? '  [도주 중]' : ''
     hud.textContent =
       'santoku · spike-0 — 덩어리 렌더 검증\n' +
-      `FPS ${Math.round(t.FPS)}    sprites ${sprites}\n` +
-      '드래그=이동  휠/핀치=줌  더블탭=사상자(-10%)  r=리셋'
+      `FPS ${Math.round(t.FPS)}    sprites ${sprites}${routing}\n` +
+      '드래그=이동  휠/핀치=줌  더블탭/f=도주  k=사상자  r=리셋'
   })
 }
 
