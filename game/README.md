@@ -18,14 +18,21 @@ src/
     types.ts     Battle/Unit/Cohort/General/Flag
     battle.ts    createBattle(스냅샷) + step(고정 틱) + 헬퍼
   snapshot.ts    v0 하드코딩 교전 스냅샷(1:1, 방패1000/창600/궁400/기200+장수)
-  headless.ts    콘솔 검증 진입점
+  scenario.ts    컷신/테스트 스크립트: 타임라인 + 병종·장수·지형 제어 op + 빌더
+  director.ts    시나리오 러너(배틀 생성·틱·타임라인 발동) — 렌더가 재사용
+  scenarios.ts   시나리오 라이브러리(advance/charge/duel/hill/defile)
+  headless.ts    시나리오 재생 진입점
 ```
+
+**시나리오/Director = 렌더와 공유하는 재생 구조.** 렌더는 `new Director(scn)` → 매 프레임 `d.step(dt)` → `render(d.battle)`. 액티브 포즈 = `d.paused=true`.
 
 ## 실행 (헤드리스)
 ```bash
 cd game
 npm install
-npm run sim        # 스냅샷 로드 → 틱 → 결정성 확인
+npm run sim              # 기본 시나리오(advance = 컷신 진격→격돌)
+npm run sim charge       # 특정 시나리오 재생
+npm run sim duel|hill|defile
 npm run typecheck
 ```
 
