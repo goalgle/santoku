@@ -49,7 +49,10 @@ async function main() {
   })
   addEventListener('keydown', (e) => {
     if (e.key === 'r') blobs.forEach((b) => b.reset())
-    if (e.key === 'k') blobs.forEach((b) => b.killCount(10)) // 사망 10명 → 10개 폴짝
+    if (e.key === 'k') { // 전면 사망 10명 → 전면부에서 10개 폴짝
+      blobs[0].killFront(10, blobs[1].anchor.x, blobs[1].anchor.y)
+      blobs[1].killFront(10, blobs[0].anchor.x, blobs[0].anchor.y)
+    }
     if (e.key === 'f') blobs.forEach((b) => b.rout())
     if (e.key === 'c') { blobs[0].moveTo(-30, 0); blobs[1].moveTo(30, 0) } // 중앙 돌격
   })
@@ -65,7 +68,11 @@ async function main() {
     const inCombat = near && !blobs.some((b) => b.isRouting)
     if (inCombat) {
       combatAcc += t.deltaMS
-      while (combatAcc > 60) { combatAcc -= 60; blobs.forEach((b) => b.killCount(2)) } // ~33명/s 씩
+      while (combatAcc > 60) { // ~33명/s 씩 전면부에서 사망
+        combatAcc -= 60
+        blobs[0].killFront(2, blobs[1].anchor.x, blobs[1].anchor.y)
+        blobs[1].killFront(2, blobs[0].anchor.x, blobs[0].anchor.y)
+      }
     } else combatAcc = 0
 
     for (const b of blobs) b.update(t.deltaMS)

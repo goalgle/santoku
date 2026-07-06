@@ -37,7 +37,6 @@ export class Blob {
   private readonly spacing: number
   private readonly full: number
   private active: number
-  private lastActive: number
   private time = 0
 
   private routing = false
@@ -52,7 +51,6 @@ export class Blob {
     this.spacing = opts.spacing
     this.full = Math.max(1, Math.floor(opts.men / opts.condense))
     this.active = this.full
-    this.lastActive = this.full
     this.buildSlots(this.full)
     for (let i = 0; i < this.full; i++) {
       const s = new Sprite(opts.texture)
@@ -67,8 +65,39 @@ export class Blob {
   get spriteCount() { return this.active }
   get isRouting() { return this.routing }
 
-  kill(fraction: number) { this.active = Math.max(1, Math.floor(this.active * (1 - fraction))) }
-  killCount(n: number) { this.active = Math.max(1, this.active - n) } // 사망 N명(스프라이트 N개)
+  // 사망 = 스프라이트 하나를 (ox,oy)에서 폴짝 튀어 소멸시키기 시작
+  private die(i: number, ox: number, oy: number) {
+    this.death[i] = { t: 0, x: ox, y: oy, vx: (Math.random() - 0.5) * 60, vy: -(110 + Math.random() * 90) }
+  }
+
+  // 일반 사망 N명: 각자 현재(슬롯) 위치에서 팝 — 흩어짐/일반 감소용
+  killCount(n: number) {
+    const start = Math.max(1, this.active - n)
+    for (let i = start; i < this.active; i++) this.die(i, this.sprites[i].x, this.sprites[i].y)
+    this.active = start
+  }
+  kill(fraction: number) { this.killCount(this.active - Math.max(1, Math.floor(this.active * (1 - fraction)))) }
+
+  // ★접전 사망 N명: 적(ex,ey) 방향 = 부대 전면부에서 위치 랜덤하게 팝
+  killFront(n: number, ex: number, ey: number) {
+    const start = Math.max(1, this.active - n)
+    let dx = ex - this.anchor.x
+    let dy = ey - this.anchor.y
+    const dl = Math.hypot(dx, dy) || 1
+    dx /= dl; dy /= dl
+    const px = -dy // 전면을 따라가는(폭) 방향
+    const py = dx
+    const cols = Math.ceil(this.active / this.rows)
+    const frontDist = (this.rows / 2) * this.spacing
+    const halfW = (cols / 2) * this.spacing * this.spread
+    for (let i = start; i < this.active; i++) {
+      const w = (Math.random() * 2 - 1) * halfW // 전면을 따라 랜덤 위치
+      const f = frontDist * (0.7 + Math.random() * 0.35) // 전면 근처 깊이 편차
+      this.die(i, this.anchor.x + dx * f + px * w, this.anchor.y + dy * f + py * w)
+    }
+    this.active = start
+  }
+
   moveTo(x: number, y: number) { if (!this.routing) this.target = { x, y } }
 
   rout() {
@@ -82,7 +111,6 @@ export class Blob {
 
   reset() {
     this.active = this.full
-    this.lastActive = this.full
     this.routing = false
     this.routT = 0
     this.target = null
@@ -108,19 +136,6 @@ export class Blob {
   update(dtMs: number) {
     const dt = dtMs / 1000
     this.time += dt
-
-    // 사망 감지: active가 줄어든 만큼 그 스프라이트들을 "폴짝 튀어 소멸" 상태로.
-    if (this.active < this.lastActive) {
-      for (let i = this.active; i < this.lastActive; i++) {
-        const s = this.sprites[i]
-        this.death[i] = {
-          t: 0, x: s.x, y: s.y,
-          vx: (Math.random() - 0.5) * 70,
-          vy: -(110 + Math.random() * 90), // 위로 튀어오름
-        }
-      }
-    }
-    this.lastActive = this.active
 
     if (this.routing) {
       this.routT += dt
