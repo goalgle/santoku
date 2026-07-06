@@ -1,49 +1,46 @@
-import { createBattle, step, moveCohort, canCommand, unitMen, cohortWidth } from './sim/battle'
+import { createBattle, step, moveCohort, unitMen, cohortWidth } from './sim/battle'
 import { V0_SNAPSHOT } from './snapshot'
-import { TROOP_NAME } from './data/units'
-import type { Battle, Unit } from './sim/types'
+import { lethalityFrac } from './data/grades'
+import { TROOPS } from './data/units'
+import type { Battle, Cohort } from './sim/types'
 
-// 1단계 B 헤드리스 검증: 이동/배치 명령 · 모임→펼침 · 회전 · 명령반경 gating · 기병 가속/선회.
+// 1단계 C 헤드리스 검증: 전선 접촉 → 접전 폭 → 근접 피해 → 전사/부상 분배 → 병력 수축.
 
 const DT = 1000 / 30
-const deg = (r: number) => ((r * 180) / Math.PI).toFixed(0)
 const P = (v: { x: number; y: number }) => `(${v.x.toFixed(0)},${v.y.toFixed(0)})`
+const runFor = (b: Battle, sec: number) => { for (let i = 0; i < Math.round((sec * 1000) / DT); i++) step(b, DT) }
+const killed = (c: Cohort, start: number) => start - c.aliveHP - c.woundedHP // 영구 손실
 
-function runFor(battle: Battle, seconds: number) {
-  const n = Math.round((seconds * 1000) / DT)
-  for (let i = 0; i < n; i++) step(battle, DT)
-}
-
-console.log('== 산토쿠 sim — 1단계 B (이동/배치) ==\n')
+console.log('== 산토쿠 sim — 1단계 C (접전 폭·근접 전투) ==\n')
 
 const battle = createBattle(V0_SNAPSHOT)
-const A: Unit = battle.units.A
-const shield = A.cohorts[0]
-const cav = A.cohorts[3]
+const A = battle.units.A
+const B = battle.units.B
+const sa = A.cohorts[0] // A 방패병(전면)
+const sb = B.cohorts[0] // B 방패병(전면)
+const start = sa.aliveHP
 
-console.log(`부대 A 병력 ${unitMen(A)} · 명령반경 ${A.flag.commandRadius.toFixed(0)} (군기 ${P(A.flag.pos)})\n`)
+console.log(`대형 배치(전면 병종): A방패 ${P(sa.anchor)}  B방패 ${P(sb.anchor)}`)
+console.log('두 방패병을 접점(±60)으로 이동 → 접촉 시 전투 시작\n')
+moveCohort(A, 0, { x: -60, y: 0 })
+moveCohort(B, 0, { x: 60, y: 0 })
 
-// 1) 이동/배치 명령 (반경 안이므로 성공)
-console.log('명령: 방패병 → (0,0),  기병 → (0,-150) [사선: 선회 확인]')
-console.log(`  방패 명령 가능? ${canCommand(A, shield)} → ${moveCohort(A, 0, { x: 0, y: 0 })}`)
-console.log(`  기병 명령 가능? ${canCommand(A, cav)} → ${moveCohort(A, 3, { x: 0, y: -150 })}\n`)
-
-// 2) 0.5초 간격으로 상태 로그 (모임→펼침, 회전, 기병 가속/선회)
-console.log('t(s) | 방패 pos     폭   facing | 기병 pos      속도  facing')
-for (let s = 0; s <= 3; s++) {
+console.log('t(s) phase   | A방패 aliveHP 부상  폭 | B방패 aliveHP 부상  폭')
+for (let s = 0; s <= 8; s++) {
   if (s > 0) runFor(battle, 1)
-  const t = (battle.time / 1000).toFixed(0)
+  const t = String((battle.time / 1000).toFixed(0))
   console.log(
-    `  ${t}  | ${P(shield.anchor).padEnd(11)} ${String(cohortWidth(shield)).padStart(3)}  ${deg(shield.facing).padStart(4)}° ` +
-    `| ${P(cav.anchor).padEnd(11)} ${cav.curSpeed.toFixed(0).padStart(4)}  ${deg(cav.facing).padStart(4)}°`,
+    ` ${t}  ${battle.phase.padEnd(7)} | ${String(Math.round(sa.aliveHP)).padStart(7)} ${String(Math.round(sa.woundedHP)).padStart(5)} ${String(cohortWidth(sa)).padStart(3)} ` +
+    `| ${String(Math.round(sb.aliveHP)).padStart(7)} ${String(Math.round(sb.woundedHP)).padStart(5)} ${String(cohortWidth(sb)).padStart(3)}`,
   )
 }
 
-// 3) 명령반경 gating: 방패병이 중앙으로 나갔으니 군기(-280)에서 멀어져 재명령 불가
-const far = Math.hypot(shield.anchor.x - A.flag.pos.x, shield.anchor.y - A.flag.pos.y)
-console.log(`\n방패병-군기 거리 ${far.toFixed(0)} vs 반경 ${A.flag.commandRadius.toFixed(0)}`)
-console.log(`  → 재명령 가능? ${canCommand(A, shield)} (반경 밖이면 false = 통제 상실)`)
-console.log(`  → moveCohort 재시도: ${moveCohort(A, 0, { x: -280, y: 0 })}`)
+// 치명율 검증: 전사 : 부상 비율이 방패병 치명율(C=7%)과 맞는가
+const leth = lethalityFrac(TROOPS.shield.lethal)
+const cas = start - sa.aliveHP // 총 사상
+const woundRatio = sa.woundedHP / cas
+console.log(`\n치명율 검증(방패 ${TROOPS.shield.lethal}=${(leth * 100).toFixed(0)}%):`)
+console.log(`  A방패 총 사상 ${cas.toFixed(0)} = 전사 ${killed(sa, start).toFixed(0)}(${((1 - woundRatio) * 100).toFixed(0)}%) + 부상 ${sa.woundedHP.toFixed(0)}(${(woundRatio * 100).toFixed(0)}%)`)
+console.log(`  → 전사 비율 ${((1 - woundRatio) * 100).toFixed(1)}% ≈ 치명율 ${(leth * 100).toFixed(0)}% ${Math.abs(1 - woundRatio - leth) < 0.001 ? '✓' : ''}`)
 
-// 4) 모임/펼침 확인: 도착 후 폭이 다시 펼쳐지는지
-console.log(`\n${TROOP_NAME[shield.kind]} 정지 후 spread ${shield.spread.toFixed(2)} (이동 중 0.35 → 정지 1.0로 복원)`)
+console.log(`\n부대 A 잔존 ${unitMen(A)} / 2200 (전면 방패만 교전, 나머지 병종은 후방 대기)`)

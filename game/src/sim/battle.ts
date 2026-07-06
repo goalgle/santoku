@@ -4,7 +4,7 @@ import { angleDiff, approachAngle, dist } from './mathutil'
 import type { Snapshot, UnitSpec } from '../snapshot'
 import { CONFIG } from '../data/config'
 import { TROOPS } from '../data/units'
-import { coef } from '../data/grades'
+import { coef, lethalityFrac } from '../data/grades'
 
 // 전투 코어: 스냅샷 → 상태 + 고정 timestep 틱 (doc/05 5.6.4).
 // 1단계 A: 데이터/틱 뼈대. 1단계 B: 이동/배치·회전·모임펼침·기병 선회·명령반경 gating.
@@ -47,13 +47,14 @@ function buildUnit(side: Side, spec: UnitSpec): Unit {
     maxHp: CONFIG.flagHp,
     broken: false,
   }
-  return {
-    side,
-    morale: 50,
-    general,
-    flag,
-    cohorts: spec.cohorts.map((c) => buildCohort(c, spec.anchor, spec.facing)),
-  }
+  // 대형 배치: 앞 병종(로스터 순)을 전면에, 나머지는 뒤로 스택 (doc/04 4.2.1)
+  const facingDir = { x: Math.cos(spec.facing), y: Math.sin(spec.facing) }
+  const stepBack = CONFIG.depth * CONFIG.spacing + 20
+  const cohorts = spec.cohorts.map((c) => buildCohort(c, spec.anchor, spec.facing))
+  cohorts.forEach((c, i) => {
+    c.anchor = { x: spec.anchor.x - facingDir.x * stepBack * i, y: spec.anchor.y - facingDir.y * stepBack * i }
+  })
+  return { side, morale: 50, general, flag, cohorts }
 }
 
 export function createBattle(snap: Snapshot): Battle {
@@ -125,21 +126,85 @@ function stepCohort(c: Cohort, dt: number): void {
   c.spread += (targetSpread - c.spread) * Math.min(1, dt * CONFIG.spreadRate)
 }
 
+// --- 전투 (doc/03 3.6.2, 접전 폭 기하 doc/05 5.6.5) ---
+
+/** 현재 활성 대형 폭(명) = (전사가능 병력 ÷ 두께) × spread */
+const activeWidthMen = (c: Cohort): number => (c.aliveHP / c.depth) * c.spread
+
+/**
+ * 접전 폭(실효 전면, 명). 전면 선분 모델:
+ *  - 마주보고(facing 반대) + 전면이 접촉거리 안일 때
+ *  - 두 전면 선분을 접촉축(AB 수직)에 투영한 겹침 길이.
+ */
+function frontageOverlapMen(a: Cohort, b: Cohort): number {
+  const fa = { x: Math.cos(a.facing), y: Math.sin(a.facing) }
+  const fb = { x: Math.cos(b.facing), y: Math.sin(b.facing) }
+  if (fa.x * fb.x + fa.y * fb.y > -0.2) return 0 // 서로 마주보지 않음
+
+  const frontA = (a.depth * CONFIG.spacing) / 2
+  const frontB = (b.depth * CONFIG.spacing) / 2
+  const sep = dist(a.anchor, b.anchor)
+  if (sep > frontA + frontB + CONFIG.contactSlop) return 0 // 전면이 안 닿음
+
+  // 접촉축 = AB 방향의 수직
+  let abx = b.anchor.x - a.anchor.x
+  let aby = b.anchor.y - a.anchor.y
+  const abl = Math.hypot(abx, aby) || 1
+  abx /= abl; aby /= abl
+  const axx = -aby, axy = abx
+
+  const Fa = { x: a.anchor.x + fa.x * frontA, y: a.anchor.y + fa.y * frontA }
+  const Fb = { x: b.anchor.x + fb.x * frontB, y: b.anchor.y + fb.y * frontB }
+  const pa = Fa.x * axx + Fa.y * axy
+  const pb = Fb.x * axx + Fb.y * axy
+  const ha = (activeWidthMen(a) * CONFIG.spacing) / 2
+  const hb = (activeWidthMen(b) * CONFIG.spacing) / 2
+
+  const overlapPx = Math.max(0, Math.min(pa + ha, pb + hb) - Math.max(pa - ha, pb - hb))
+  return overlapPx / CONFIG.spacing
+}
+
+/** attacker → target 근접 피해 1틱. 접전 폭 × 공속 × 공/방 → 전사/부상 분배. */
+function applyMelee(attacker: Cohort, target: Cohort, overlapMen: number, dt: number): void {
+  const atk = TROOPS[attacker.kind]
+  const def = TROOPS[target.kind]
+  const attackUnits = overlapMen / CONFIG.attackUnit
+  const dps = attackUnits * coef(atk.atkSpeed) * (coef(atk.attack) / coef(def.defense)) * CONFIG.damageScale
+  const dmg = Math.min(dps * dt, target.aliveHP)
+  target.aliveHP -= dmg
+  target.woundedHP += dmg * (1 - lethalityFrac(atk.lethal)) // 나머지는 전사(영구)
+}
+
 /** 고정 timestep 한 틱. */
 export function step(battle: Battle, dtMs: number): void {
   const dt = dtMs / 1000
   battle.time += dtMs
   battle.tick += 1
+
+  // 이동/회전
   for (const side of ['A', 'B'] as Side[]) {
     for (const c of battle.units[side].cohorts) stepCohort(c, dt)
   }
-  // TODO(C): 전선 접촉 → 접전 폭 → 피해(공속·치명율) → 사기 → 종료·도주
+
+  // 전투: 마주보는 병종 쌍의 접전 폭 → 상호 피해
+  let contact = false
+  for (const ca of battle.units.A.cohorts) {
+    for (const cb of battle.units.B.cohorts) {
+      const wMen = frontageOverlapMen(ca, cb)
+      if (wMen <= 0) continue
+      contact = true
+      applyMelee(ca, cb, wMen, dt)
+      applyMelee(cb, ca, wMen, dt)
+    }
+  }
+  if (contact && battle.phase === 'deploy') battle.phase = 'engage'
+  // TODO(D): 사기 → 종료(사기0)·도주
 }
 
 // --- 로깅/검증 헬퍼 ---
 export const unitMen = (u: Unit): number =>
   u.cohorts.reduce((n, c) => n + c.aliveHP + c.woundedHP, 0)
 
-/** 대형 폭(명) = (병력 ÷ 두께) × spread */
+/** 활성 대형 폭(명) = (전사가능 병력 ÷ 두께) × spread */
 export const cohortWidth = (c: Cohort): number =>
-  Math.ceil(((c.aliveHP + c.woundedHP) / c.depth) * c.spread)
+  Math.ceil((c.aliveHP / c.depth) * c.spread)

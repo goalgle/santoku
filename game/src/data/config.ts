@@ -2,7 +2,13 @@
 
 export const CONFIG = {
   depth: 10,               // 대형 최소 두께 (doc/03 3.6.2)
+  spacing: 12,             // 병사 간격(px/명) — 대형 물리 크기 환산
   flagHp: 500,             // 부대군기 HP (임시)
+
+  // 전투 (doc/03 3.6.2)
+  contactSlop: 20,         // 전면 접촉 판정 여유(px)
+  attackUnit: 10,          // 폭 10명 = 공격 1단위
+  damageScale: 6,          // 피해 배율(잠정 — 튜닝 대상)
 
   // 장수 반경 (doc/03 3.2.1): 통솔·지력 100 → 장수유닛 30배
   generalUnitSize: 10,
