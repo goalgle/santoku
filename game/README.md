@@ -26,6 +26,8 @@ src/
 
 **시나리오/Director = 렌더와 공유하는 재생 구조.** 렌더는 `new Director(scn)` → 매 프레임 `d.step(dt)` → `render(d.battle)`. 액티브 포즈 = `d.paused=true`.
 
+📝 **컷신/시나리오 작성법 → [CUTSCENES.md](./CUTSCENES.md)**
+
 ## 실행 (헤드리스)
 ```bash
 cd game

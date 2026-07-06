@@ -49,7 +49,10 @@
 - [x] **1단계 E — 기병 charge·장수 (헤드리스)** — `game/`. **기병 charge**(최대속도→공격 A→S·방어 보정, **저지로 감속=창>방패 카운터**; charge 임팩트 데미지 튜닝 TODO), **장수**(무력 일기토, HP0→휴식·군기 리젠·재출진, 근접 10초→사기+5, **생사 판정** HP≥50% 대기/미만 부상·사망). 검증 ✓.
 - [x] **1단계 F — 지형 (헤드리스)** — `game/` (data/terrain.ts 템플릿 3종). **고지→저지 공격 +20%**(검증 B/A=1.20 ✓)·**궁 사거리 +30%**, **애로 병목**(접전 폭 100→30, 손실 32% ✓). **★ 1단계 A~F 전투 sim 완결(헤드리스).**
 - [x] **시나리오/Director 구조** — `game/` (scenario.ts·director.ts·scenarios.ts). 컷신·테스트를 **타임라인(언제·무엇)** 으로 스크립트(병종·장수·지형 제어 op). `new Director(scn)`→`step(dt)`→`battle`. 액티브 포즈=paused. **렌더가 그대로 재사용할 재생 구조.** `npm run sim [advance|charge|duel|hill|defile]`.
-- [~] **렌더(PixiJS) 붙이기 (1차)** — `game/src/render`(blobView·camera)·`game/src/web/main.ts`. **sim(Director) 상태를 스프라이트로 그림** — cohort anchor/facing/폭/사상 → 덩어리, 장수/군기 마커, 지형, 핀치줌, space=액티브 포즈. `npm run dev`(폰=LAN). **배포를 spike-0→game으로 전환**(`.github/workflows/deploy.yml`), 라이브 https://goalgle.github.io/santoku/ 에서 전투 재생. **첫 시각 검증 = Kill/Go 지점.** 남음: 개입 UI(명령 입력)·사망 팝·시나리오별 튜닝.
+- [~] **렌더(PixiJS) 붙이기 (1차)** — `game/src/render`(blobView·camera)·`game/src/web/main.ts`. **sim(Director) 상태를 스프라이트로 그림** — cohort anchor/facing/폭/사상 → 덩어리, 장수/군기 마커, 지형, 핀치줌, space=액티브 포즈. `npm run dev`(폰=LAN, `?s=시나리오키`). **배포 spike-0→game 전환**, 라이브 https://goalgle.github.io/santoku/ 에서 전투 재생.
+  - **일기토 결투장 연출**(렌더 전용): 양측 장수 근접 시 병사들이 물러나 원을 만들어 둘러쌈, 접전 지속(meleeTime)에 원 성장, 장수는 서로 돎. (`?s=duel`)
+  - **컷신/시나리오 작성 가이드 → `game/CUTSCENES.md`** (scene 빌더·op·좌표/인덱스 규칙).
+  - **남음**: 개입 UI(명령 입력)·사망 팝/애니 이식(spike-0)·전면 진격 시나리오·scale 튜닝·장수 부드러운 이동.
 - [ ] **07 데이터 채우기** — 등급→계수 환산·부대 규모 등 **수치** 1차안 (🟡 골격 확정, 수치 OPEN)
 
 ### 확정 요약 (장수 시스템 — 2026-06-30~07-01)
