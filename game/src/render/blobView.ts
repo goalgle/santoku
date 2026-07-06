@@ -25,7 +25,8 @@ export class BlobView {
     }
   }
 
-  update(c: Cohort, dtMs: number): void {
+  // clear = 결투장 정리 원: 이 원 안의 병사는 바깥으로 밀어내 링을 만든다(렌더 연출)
+  update(c: Cohort, dtMs: number, clear?: { cx: number; cy: number; r: number }): void {
     this.time += dtMs / 1000
     const men = Math.max(0, c.aliveHP)
     const nS = Math.min(this.sprites.length, Math.ceil(men / this.condense))
@@ -46,8 +47,16 @@ export class BlobView {
       const wx = -sin * lx + cos * ly
       const wy = cos * lx + sin * ly
       const bob = Math.sin(this.time * 4 + this.phases[i]) * 3
-      s.x = c.anchor.x + wx
-      s.y = c.anchor.y + wy + bob
+      let px = c.anchor.x + wx
+      let py = c.anchor.y + wy + bob
+      // 결투장: 원 안이면 가장자리로 밀어내 병사들이 장수를 둘러싸게
+      if (clear) {
+        const dx = px - clear.cx, dy = py - clear.cy
+        const dd = Math.hypot(dx, dy)
+        if (dd < clear.r) { const k = clear.r / (dd || 1); px = clear.cx + dx * k; py = clear.cy + dy * k }
+      }
+      s.x = px
+      s.y = py
     }
   }
 }

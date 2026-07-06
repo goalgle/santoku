@@ -22,11 +22,16 @@ export const SCENARIOS: Record<string, Scenario> = {
     .duration(6)
     .build(),
 
-  // 장수 일기토 → 휴식·리젠·재출진
-  duel: scene('장수 일기토', V0_SNAPSHOT)
-    .at(0, setMight('A', 85), setMight('B', 65), placeGeneral('A', -20, 0), placeGeneral('B', 20, 0),
-      placeFlag('A', -120, 0), placeFlag('B', 120, 0))
-    .duration(30)
+  // 장수 일기토 (결투장): 병사들이 모여 관객처럼 서고, 장수 전진→응전→일기토, 원이 자라며 병사를 밀어냄
+  duel: scene('장수 일기토 (결투장)', V0_SNAPSHOT)
+    .at(0, setMight('A', 80), setMight('B', 72),
+      placeFlag('A', -180, 0), placeFlag('B', 180, 0),
+      placeGeneral('A', -250, 0), placeGeneral('B', 250, 0),
+      forceTo('A', 0, -95, 0), forceTo('B', 0, 95, 0),   // 방패 관객(앞줄)
+      forceTo('A', 1, -140, 0), forceTo('B', 1, 140, 0)) // 창 관객(뒷줄)
+    .at(1.2, placeGeneral('A', -22, 0), say('A 장수 전진'))
+    .at(3, placeGeneral('B', 22, 0), say('B 장수 응전 — 일기토!'))
+    .duration(40)
     .build(),
 
   // 지형: 고지 격돌(A 언덕 위)

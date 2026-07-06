@@ -58,12 +58,31 @@ async function main() {
 
   addEventListener('keydown', (e) => { if (e.key === ' ') { e.preventDefault(); d.paused = !d.paused } })
 
+  let rtime = 0
   app.ticker.add((t) => {
     if (!d.done) d.step(t.deltaMS)
-    for (const { c, v } of views) v.update(c, t.deltaMS)
+    rtime += t.deltaMS / 1000
+
+    // 결투장: 양측 장수가 출진·근접이면 정리 원 생성(접전 지속 meleeTime에 따라 성장)
+    const gA = d.battle.units.A.general, gB = d.battle.units.B.general
+    let clear: { cx: number; cy: number; r: number } | undefined
+    if (gA.state === 'out' && gB.state === 'out' &&
+        Math.hypot(gA.pos.x - gB.pos.x, gA.pos.y - gB.pos.y) < 120) {
+      const grow = Math.min(1, Math.max(gA.meleeTime, gB.meleeTime) / 6)
+      clear = { cx: (gA.pos.x + gB.pos.x) / 2, cy: (gA.pos.y + gB.pos.y) / 2, r: 34 + grow * 60 }
+    }
+
+    for (const { c, v } of views) v.update(c, t.deltaMS, clear)
+
     for (const { u, s } of gens) {
       s.visible = u.general.state === 'out' || u.general.state === 'rest'
-      s.position.set(u.general.pos.x, u.general.pos.y)
+      if (clear && u.general.state === 'out') {
+        // 결투 중 두 장수가 서로 도는 연출(렌더 전용)
+        const a = rtime * 3 + (u.side === 'A' ? 0 : Math.PI)
+        s.position.set(clear.cx + Math.cos(a) * 14, clear.cy + Math.sin(a) * 14)
+      } else {
+        s.position.set(u.general.pos.x, u.general.pos.y)
+      }
     }
     for (const { u, s } of flags) s.position.set(u.flag.pos.x, u.flag.pos.y)
     hud.textContent = hudText(d, t.FPS)
