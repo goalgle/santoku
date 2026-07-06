@@ -1,9 +1,10 @@
 import { Container, Sprite, Texture } from 'pixi.js'
 
 // 0단계 스파이크용 "덩어리(Cohort)" — 실제 코드베이스 아님(던져버리는 실험).
-// 검증 대상: 앵커+슬롯+노이즈 렌더 / facing 회전 / 이동(모임→펼침) / 사상자 수축 /
-//           ★도주 = 대형 붕괴·혼란 흩어짐 후퇴 (리스크 체크).
-// ⚠️ bob·스캐터·흩어짐은 순수 렌더 표현이다(시뮬에 되먹이지 않음). doc/05 5.6 참고.
+// 검증 대상: 앵커+슬롯+노이즈 렌더 / facing / 이동(모임→펼침) / 사상자 수축 /
+//           도주(대형 붕괴 흩어짐) / ★사상자 = 개별 스프라이트 "폴짝 튀어 소멸" 연출.
+// ⚠️ bob·흩어짐·사망연출은 순수 렌더 표현이다(시뮬에 되먹이지 않음). doc/05 5.6 참고.
+// 핵심: sim은 "이번 틱 N명 사망"이라는 숫자만 준다(O(부대)). N개 스프라이트를 튀겨 없애는 건 렌더.
 
 export interface BlobOptions {
   men: number
@@ -17,13 +18,10 @@ export interface BlobOptions {
   texture: Texture
 }
 
-interface Slot {
-  bx: number      // 중심 기준 열(width)
-  by: number      // 중심 기준 행(depth)
-  phase: number   // bob 위상차
-  dx: number      // 도주 시 흩어질 방향(단위벡터)
-  dy: number
-}
+interface Slot { bx: number; by: number; phase: number; dx: number; dy: number }
+interface Death { t: number; x: number; y: number; vx: number; vy: number }
+
+const DEATH_DUR = 0.5 // 폴짝→소멸 지속(초)
 
 export class Blob {
   readonly container = new Container()
@@ -33,14 +31,15 @@ export class Blob {
   private spread = 1
   private readonly speed = 130
   private readonly sprites: Sprite[] = []
+  private readonly death: (Death | null)[] = []
   private slots: Slot[] = []
   private readonly rows: number
   private readonly spacing: number
   private readonly full: number
   private active: number
+  private lastActive: number
   private time = 0
 
-  // 도주 상태
   private routing = false
   private routT = 0
   private fleeDir = { x: 0, y: 0 }
@@ -53,6 +52,7 @@ export class Blob {
     this.spacing = opts.spacing
     this.full = Math.max(1, Math.floor(opts.men / opts.condense))
     this.active = this.full
+    this.lastActive = this.full
     this.buildSlots(this.full)
     for (let i = 0; i < this.full; i++) {
       const s = new Sprite(opts.texture)
@@ -60,6 +60,7 @@ export class Blob {
       s.tint = opts.color
       this.container.addChild(s)
       this.sprites.push(s)
+      this.death.push(null)
     }
   }
 
@@ -67,25 +68,26 @@ export class Blob {
   get isRouting() { return this.routing }
 
   kill(fraction: number) { this.active = Math.max(1, Math.floor(this.active * (1 - fraction))) }
+  killCount(n: number) { this.active = Math.max(1, this.active - n) } // 사망 N명(스프라이트 N개)
   moveTo(x: number, y: number) { if (!this.routing) this.target = { x, y } }
 
-  // 도주 시작: 대형이 무너지며 자기 편 방향(가장자리)으로 혼란스럽게 후퇴
   rout() {
     if (this.routing) return
     this.routing = true
     this.routT = 0
     this.target = null
     const len = Math.hypot(this.anchor.x, this.anchor.y) || 1
-    // 화면 중앙에서 멀어지는 쪽으로 도망(대략 자기 진영 방향)
     this.fleeDir = { x: this.anchor.x / len, y: this.anchor.y / len }
   }
 
   reset() {
     this.active = this.full
+    this.lastActive = this.full
     this.routing = false
     this.routT = 0
     this.target = null
     this.spread = 1
+    for (let i = 0; i < this.sprites.length; i++) { this.death[i] = null; this.sprites[i].alpha = 1 }
   }
 
   private buildSlots(n: number) {
@@ -95,12 +97,11 @@ export class Blob {
       const bx = c - (cols - 1) / 2
       for (let r = 0; r < this.rows; r++) {
         const by = r - (this.rows - 1) / 2
-        // 위상·흩어짐 방향은 렌더 표현용(시뮬 아님) → Math.random 허용
         const ang = Math.random() * Math.PI * 2
         raw.push({ bx, by, phase: Math.random() * Math.PI * 2, dx: Math.cos(ang), dy: Math.sin(ang) })
       }
     }
-    raw.sort((a, b) => Math.abs(a.bx) - Math.abs(b.bx)) // 중앙열 우선(사상자 좌우→중앙)
+    raw.sort((a, b) => Math.abs(a.bx) - Math.abs(b.bx))
     this.slots = raw.slice(0, n)
   }
 
@@ -108,13 +109,24 @@ export class Blob {
     const dt = dtMs / 1000
     this.time += dt
 
+    // 사망 감지: active가 줄어든 만큼 그 스프라이트들을 "폴짝 튀어 소멸" 상태로.
+    if (this.active < this.lastActive) {
+      for (let i = this.active; i < this.lastActive; i++) {
+        const s = this.sprites[i]
+        this.death[i] = {
+          t: 0, x: s.x, y: s.y,
+          vx: (Math.random() - 0.5) * 70,
+          vy: -(110 + Math.random() * 90), // 위로 튀어오름
+        }
+      }
+    }
+    this.lastActive = this.active
+
     if (this.routing) {
       this.routT += dt
-      // 가장자리로 후퇴
       this.anchor.x += this.fleeDir.x * 170 * dt
       this.anchor.y += this.fleeDir.y * 170 * dt
       this.facing = Math.atan2(this.fleeDir.y, this.fleeDir.x) + Math.PI / 2
-      // 도주 중 속수무책 사상자(약 10초에 걸쳐 얇아짐)
       this.routKillAcc += dt
       if (this.routKillAcc > 0.4) { this.routKillAcc = 0; this.kill(0.03) }
     } else if (this.target) {
@@ -130,11 +142,8 @@ export class Blob {
       }
     }
 
-    // 대열 폭: 도주=넓게 풀림 / 이동=모임 / 정지=펼침
     const targetSpread = this.routing ? 1.7 : this.target ? 0.35 : 1
     this.spread += (targetSpread - this.spread) * Math.min(1, dt * 3)
-
-    // 흩어짐 정도(도주 경과에 비례해 대형이 구름처럼 퍼짐)
     const disperse = this.routing ? Math.min(140, this.routT * 55) : 0
 
     const cos = Math.cos(this.facing)
@@ -144,15 +153,34 @@ export class Blob {
 
     for (let i = 0; i < this.sprites.length; i++) {
       const s = this.sprites[i]
+
+      // 사망 연출(폴짝 튀어올라 페이드 소멸) — 대형과 무관하게 개별 이벤트
+      const d = this.death[i]
+      if (d) {
+        d.t += dt
+        if (d.t >= DEATH_DUR) { s.visible = false; s.alpha = 1; this.death[i] = null; continue }
+        d.vy += 560 * dt // 중력
+        d.x += d.vx * dt
+        d.y += d.vy * dt
+        const p = d.t / DEATH_DUR
+        s.visible = true
+        s.alpha = 1 - p
+        s.x = d.x
+        s.y = d.y
+        s.scale.set(1 + 0.6 * Math.sin(p * Math.PI)) // 폴짝: 커졌다 작아짐
+        continue
+      }
+
       if (i >= this.active) { s.visible = false; continue }
+
       s.visible = true
+      s.alpha = 1
       const slot = this.slots[i]
       const lx = slot.bx * this.spacing * this.spread
       const ly = slot.by * this.spacing
       let wx = lx * cos - ly * sin
       let wy = lx * sin + ly * cos
       if (this.routing) {
-        // 슬롯별 무작위 방향으로 벌어짐 + 매 프레임 지터(공황)
         wx += slot.dx * disperse + (Math.random() - 0.5) * 4
         wy += slot.dy * disperse + (Math.random() - 0.5) * 4
       }

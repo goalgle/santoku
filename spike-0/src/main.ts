@@ -40,7 +40,7 @@ async function main() {
     if (!blobs[1].isRouting) blobs[1].moveTo(120 + Math.random() * 240, (Math.random() - 0.5) * 340)
   }
 
-  // 더블탭/더블클릭 → ★도주(대형 붕괴·흩어짐 후퇴) / 'k' = 사상자 -10% / 'r' = 리셋
+  // 더블탭 → ★도주 / 키: c=중앙 돌격(접전) k=사망버스트 f=도주 r=리셋
   let lastTap = 0
   app.canvas.addEventListener('pointerdown', () => {
     const now = performance.now() // 렌더/입력용 — 시뮬 아님
@@ -49,21 +49,33 @@ async function main() {
   })
   addEventListener('keydown', (e) => {
     if (e.key === 'r') blobs.forEach((b) => b.reset())
-    if (e.key === 'k') blobs.forEach((b) => b.kill(0.1))
+    if (e.key === 'k') blobs.forEach((b) => b.killCount(10)) // 사망 10명 → 10개 폴짝
     if (e.key === 'f') blobs.forEach((b) => b.rout())
+    if (e.key === 'c') { blobs[0].moveTo(-30, 0); blobs[1].moveTo(30, 0) } // 중앙 돌격
   })
+
+  // 접전 연출: 두 덩어리가 붙으면 매 틱 소수 사망 → 다발적 팝(sim은 '숫자'만, 연출은 렌더)
+  let combatAcc = 0
 
   app.ticker.add((t) => {
     wanderT += t.deltaMS
     if (wanderT > 3800) { wanderT = 0; wander() }
+
+    const near = Math.hypot(blobs[0].anchor.x - blobs[1].anchor.x, blobs[0].anchor.y - blobs[1].anchor.y) < 80
+    const inCombat = near && !blobs.some((b) => b.isRouting)
+    if (inCombat) {
+      combatAcc += t.deltaMS
+      while (combatAcc > 60) { combatAcc -= 60; blobs.forEach((b) => b.killCount(2)) } // ~33명/s 씩
+    } else combatAcc = 0
+
     for (const b of blobs) b.update(t.deltaMS)
 
     const sprites = blobs.reduce((n, b) => n + b.spriteCount, 0)
-    const routing = blobs.some((b) => b.isRouting) ? '  [도주 중]' : ''
+    const state = blobs.some((b) => b.isRouting) ? '  [도주]' : inCombat ? '  [접전]' : ''
     hud.textContent =
       'santoku · spike-0 — 덩어리 렌더 검증\n' +
-      `FPS ${Math.round(t.FPS)}    sprites ${sprites}${routing}\n` +
-      '드래그=이동  휠/핀치=줌  더블탭/f=도주  k=사상자  r=리셋'
+      `FPS ${Math.round(t.FPS)}    sprites ${sprites}${state}\n` +
+      '드래그=이동 휠/핀치=줌 · c=돌격(접전) 더블탭/f=도주 k=사망 r=리셋'
   })
 }
 
