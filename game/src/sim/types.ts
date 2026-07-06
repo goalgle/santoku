@@ -13,10 +13,12 @@ export interface Cohort {
   aliveHP: number    // 전사 가능 병력(줄면 영구 손실)
   woundedHP: number  // 부상(복구 가능, 전술 중 회복 없음 — doc/03 3.6.2)
   anchor: Vec
-  facing: number     // radians
+  facing: number     // radians (전면이 향하는 방향)
   depth: number      // 대형 깊이(기본 10)
   stance: Stance
   target: Vec | null
+  spread: number     // 대형 폭 계수: 1=펼침, 이동 중 0.35로 모임
+  curSpeed: number   // 현재 속도(기병 가속용). px/s
 }
 
 export type GeneralState = 'out' | 'rest' | 'standby' // 출진/휴식/대기

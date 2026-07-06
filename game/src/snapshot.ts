@@ -30,13 +30,13 @@ export const V0_SNAPSHOT: Snapshot = {
   units: {
     A: {
       anchor: { x: -280, y: 0 },
-      facing: Math.PI / 2, // 서로 마주봄
+      facing: 0, // 전면 = +x (오른쪽의 B를 향함)
       general: { command: 70, might: 75, intel: 60, hp: 100 },
       cohorts: ROSTER.map((c) => ({ ...c })),
     },
     B: {
       anchor: { x: 280, y: 0 },
-      facing: -Math.PI / 2,
+      facing: Math.PI, // 전면 = -x (왼쪽의 A를 향함)
       general: { command: 70, might: 75, intel: 60, hp: 100 },
       cohorts: ROSTER.map((c) => ({ ...c })),
     },
