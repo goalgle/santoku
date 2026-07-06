@@ -49,10 +49,7 @@ async function main() {
   })
   addEventListener('keydown', (e) => {
     if (e.key === 'r') blobs.forEach((b) => b.reset())
-    if (e.key === 'k') { // 전면 사망 10명 → 전면부에서 10개 폴짝
-      blobs[0].killFront(10, blobs[1].anchor.x, blobs[1].anchor.y)
-      blobs[1].killFront(10, blobs[0].anchor.x, blobs[0].anchor.y)
-    }
+    if (e.key === 'k') blobs.forEach((b) => b.killFront(10)) // 전면 사망 10명 → 전면부에서 10개 폴짝
     if (e.key === 'f') blobs.forEach((b) => b.rout())
     if (e.key === 'c') { blobs[0].moveTo(-30, 0); blobs[1].moveTo(30, 0) } // 중앙 돌격
   })
@@ -70,8 +67,7 @@ async function main() {
       combatAcc += t.deltaMS
       while (combatAcc > 60) { // ~33명/s 씩 전면부에서 사망
         combatAcc -= 60
-        blobs[0].killFront(2, blobs[1].anchor.x, blobs[1].anchor.y)
-        blobs[1].killFront(2, blobs[0].anchor.x, blobs[0].anchor.y)
+        blobs.forEach((b) => b.killFront(2))
       }
     } else combatAcc = 0
 

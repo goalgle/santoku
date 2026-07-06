@@ -78,22 +78,21 @@ export class Blob {
   }
   kill(fraction: number) { this.killCount(this.active - Math.max(1, Math.floor(this.active * (1 - fraction)))) }
 
-  // ★접전 사망 N명: 적(ex,ey) 방향 = 부대 전면부에서 위치 랜덤하게 팝
-  killFront(n: number, ex: number, ey: number) {
+  // ★접전 사망 N명: 대열 "전면 1~3열"의 랜덤 위치에서 팝.
+  //   실루엣은 여전히 좌우(꼬리)부터 줄지만, 팝만 전면에 띄운다.
+  //   위치는 렌더와 동일한 변환(facing·spread)으로 계산 → 대열에 딱 붙는다(무관한 장소 X).
+  killFront(n: number) {
     const start = Math.max(1, this.active - n)
-    let dx = ex - this.anchor.x
-    let dy = ey - this.anchor.y
-    const dl = Math.hypot(dx, dy) || 1
-    dx /= dl; dy /= dl
-    const px = -dy // 전면을 따라가는(폭) 방향
-    const py = dx
+    const cos = Math.cos(this.facing)
+    const sin = Math.sin(this.facing)
     const cols = Math.ceil(this.active / this.rows)
-    const frontDist = (this.rows / 2) * this.spacing
-    const halfW = (cols / 2) * this.spacing * this.spread
+    const byFront = -(this.rows - 1) / 2 // 전면열(local -by가 앞)
     for (let i = start; i < this.active; i++) {
-      const w = (Math.random() * 2 - 1) * halfW // 전면을 따라 랜덤 위치
-      const f = frontDist * (0.7 + Math.random() * 0.35) // 전면 근처 깊이 편차
-      this.die(i, this.anchor.x + dx * f + px * w, this.anchor.y + dy * f + py * w)
+      const bx = (Math.random() * 2 - 1) * ((cols - 1) / 2) // 폭 방향 랜덤
+      const by = byFront + Math.random() * 2.5              // 전면 1~3열
+      const lx = bx * this.spacing * this.spread
+      const ly = by * this.spacing
+      this.die(i, this.anchor.x + lx * cos - ly * sin, this.anchor.y + lx * sin + ly * cos)
     }
     this.active = start
   }
