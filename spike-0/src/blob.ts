@@ -15,8 +15,10 @@ export interface BlobOptions {
   x: number
   y: number
   facing: number
-  texture: Texture
+  frames: Texture[] // ○□△★ 연속 애니 프레임(성능 테스트용)
 }
+
+const ANIM_FPS = 6 // 프레임 전환 속도(초당)
 
 interface Slot { bx: number; by: number; phase: number; dx: number; dy: number }
 interface Death { t: number; x: number; y: number; vx: number; vy: number }
@@ -35,6 +37,7 @@ export class Blob {
   private slots: Slot[] = []
   private readonly rows: number
   private readonly spacing: number
+  private readonly frames: Texture[]
   private readonly full: number
   private active: number
   private time = 0
@@ -51,11 +54,12 @@ export class Blob {
     this.start = { x: opts.x, y: opts.y, facing: opts.facing }
     this.rows = opts.rows
     this.spacing = opts.spacing
+    this.frames = opts.frames
     this.full = Math.max(1, Math.floor(opts.men / opts.condense))
     this.active = this.full
     this.buildSlots(this.full)
     for (let i = 0; i < this.full; i++) {
-      const s = new Sprite(opts.texture)
+      const s = new Sprite(opts.frames[0])
       s.anchor.set(0.5)
       s.tint = opts.color
       this.container.addChild(s)
@@ -202,6 +206,8 @@ export class Blob {
         wx += slot.dx * disperse + (Math.random() - 0.5) * 4
         wy += slot.dy * disperse + (Math.random() - 0.5) * 4
       }
+      // 연속 애니: 매 틱 프레임 교체(슬롯별 위상차로 비동기) — 성능 테스트
+      s.texture = this.frames[Math.floor(this.time * ANIM_FPS + slot.phase * 3) % this.frames.length]
       const pulse = Math.sin(this.time * bobFreq + slot.phase)
       s.x = this.anchor.x + wx
       s.y = this.anchor.y + wy + pulse * bobAmp
