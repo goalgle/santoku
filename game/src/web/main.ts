@@ -63,17 +63,18 @@ async function main() {
   }
 
   // 카메라 앵글 버튼 + 키
-  const nudgeTilt = (dv: number) => { setTilt(getTilt() + dv); applyTilt() } // 스텝 0.15
+  const nudgeTilt = (dv: number) => { setTilt(getTilt() + dv) } // 앵글은 ticker에서 매 프레임 적용
   document.getElementById('angleUp')?.addEventListener('click', () => nudgeTilt(0.15))
   document.getElementById('angleDown')?.addEventListener('click', () => nudgeTilt(-0.15))
   addEventListener('keydown', (e) => {
     if (e.key === ' ') { e.preventDefault(); d.paused = !d.paused }
-    if (e.key === '[') nudgeTilt(-0.15)
-    if (e.key === ']') nudgeTilt(0.15)
+    if (e.key === '0') nudgeTilt(0.15)  // 앵글 ↑
+    if (e.key === '9') nudgeTilt(-0.15) // 앵글 ↓
   })
 
   let rtime = 0
   app.ticker.add((t) => {
+    tiltLayer.scale.y = 1 - getTilt() * 0.6 // 앵글을 매 프레임 강제 적용(놓칠 여지 제거)
     if (!d.done) d.step(t.deltaMS)
     rtime += t.deltaMS / 1000
 
@@ -117,7 +118,7 @@ function hudText(d: Director, fps: number, sprites: number): string {
   return (
     `산토쿠 · "${d.scenario.name}"  [${KEY}]\n` +
     `FPS ${Math.round(fps)}  sprites ${sprites}  앵글 ${getTilt().toFixed(1)}  t=${(b.time / 1000).toFixed(1)}s  ${b.phase}${d.paused ? ' ⏸' : ''}${res}\n` +
-    `사기 A ${Math.round(b.units.A.morale)} / B ${Math.round(b.units.B.morale)}   ·  space=일시정지  [ ]=앵글  드래그·핀치=카메라`
+    `사기 A ${Math.round(b.units.A.morale)} / B ${Math.round(b.units.B.morale)}   ·  space=일시정지  9/0=앵글  드래그·핀치=카메라`
   )
 }
 
