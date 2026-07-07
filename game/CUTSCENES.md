@@ -13,9 +13,11 @@
 // src/scenarios.ts 의 SCENARIOS 에 추가
 import { scene, place, forceTo, setMight, placeGeneral, setTerrain, say } from './scenario'
 
+const DOWN = Math.PI / 2, UP = -Math.PI / 2 // 전면 방향(상하 대립)
+
 myScene: scene('내 컷신', V0_SNAPSHOT)
-  .at(0,   place('A', 0, -300, 0, 0), place('B', 0, 300, 0, Math.PI), say('대치'))
-  .at(1.5, forceTo('A', 0, -40, 0), forceTo('B', 0, 40, 0), say('진격'))
+  .at(0,   place('A', 0, 0, -300, DOWN), place('B', 0, 0, 300, UP), say('대치'))
+  .at(1.5, forceTo('A', 0, 0, -40), forceTo('B', 0, 0, 40), say('진격'))
   .duration(14)
   .build(),
 ```
@@ -30,10 +32,11 @@ npm run sim myScene    # 콘솔(헤드리스)
 ```
 
 ## 좌표·인덱스 규칙
-- **side**: `'A'`(파랑, 왼쪽) / `'B'`(빨강, 오른쪽)
+- **상하 대립(모바일 세로)**: `'A'`(파랑, **위**) / `'B'`(빨강, **아래**)
 - **병종 인덱스**: `0`=방패 · `1`=창 · `2`=궁 · `3`=기병 (스냅샷 편성 순)
 - **좌표**: 월드 px, 원점=중앙, **+x 오른쪽 · +y 아래**
-- **facing**: 라디안, `0`=+x(오른쪽), `Math.PI`=왼쪽. 전면이 향하는 방향.
+- **facing**: 라디안, 전면이 향하는 방향. `DOWN=π/2`(아래) · `UP=-π/2`(위) · `0`=오른쪽.
+  A는 아래(DOWN)로, B는 위(UP)로 마주본다. (좌우 대립으로 바꾸려면 스냅샷·시나리오 좌표만 회전 — sim 코드 무관.)
 
 ## op 목록 (`scenario.ts`)
 | op | 효과 |
