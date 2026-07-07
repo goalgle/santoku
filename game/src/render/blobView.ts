@@ -10,7 +10,7 @@ let TILT = 0 // 시작=평면. +로 기울인다.
 export const setTilt = (v: number): void => { TILT = Math.max(0, Math.min(1, v)) }
 export const getTilt = (): number => TILT
 export const perspScale = (y: number): number =>
-  1 + Math.max(-0.25, Math.min(0.45, (y / 900) * (0.3 + TILT * 1.4)))
+  1 + Math.max(-0.7, Math.min(1.2, (y / 900) * (0.3 + TILT * 1.4) * 3)) // 원근 비율 ~3배 강화
 
 // 하나의 Cohort를 스프라이트로 렌더. 스프라이트는 공유 정렬 컨테이너(sortableChildren)에 넣어
 // 매 프레임 zIndex=y 로 깊이 정렬한다. 상태의 소스는 sim(cohort).
