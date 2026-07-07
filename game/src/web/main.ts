@@ -27,7 +27,7 @@ async function main() {
   // tiltLayer = 수직 압축(카메라 앵글)을 카메라 줌과 분리
   const tiltLayer = new Container()
   world.addChild(tiltLayer)
-  const applyTilt = () => { tiltLayer.scale.y = 1 - getTilt() * 0.45 }
+  const applyTilt = () => { tiltLayer.scale.y = 1 - getTilt() * 0.6 } // 앵글↑ = 세로 압축↑
   applyTilt()
 
   const scn = SCENARIOS[KEY] ?? SCENARIOS.advance
@@ -37,6 +37,10 @@ async function main() {
   tiltLayer.addChild(terrain)
   terrain.rect(-2000, -1200, 4000, 2400).fill(0x3f5e3a)
   for (const h of d.battle.terrain.hills) terrain.ellipse(h.x, h.y, h.radius, h.radius * 0.7).fill(0x63763f)
+  // 바닥 격자(틸트/원근 확인용) — 앵글 올리면 세로 간격이 압축돼 기울어 보임
+  for (let gx = -1200; gx <= 1200; gx += 100) terrain.moveTo(gx, -800).lineTo(gx, 800)
+  for (let gy = -800; gy <= 800; gy += 100) terrain.moveTo(-1200, gy).lineTo(1200, gy)
+  terrain.stroke({ color: 0x2c4a2a, width: 1, alpha: 0.6 })
 
   const soldierTex = app.renderer.generateTexture(new Graphics().circle(0, 0, 5).fill(0xffffff).stroke({ color: 0x10240f, width: 1, alpha: 0.4 }))
   const genTex = app.renderer.generateTexture(new Graphics().star(0, 0, 5, 9, 4).fill(0xffffff))
@@ -59,13 +63,13 @@ async function main() {
   }
 
   // 카메라 앵글 버튼 + 키
-  const nudgeTilt = (dv: number) => { setTilt(getTilt() + dv); applyTilt() }
-  document.getElementById('angleUp')?.addEventListener('click', () => nudgeTilt(0.1))
-  document.getElementById('angleDown')?.addEventListener('click', () => nudgeTilt(-0.1))
+  const nudgeTilt = (dv: number) => { setTilt(getTilt() + dv); applyTilt() } // 스텝 0.15
+  document.getElementById('angleUp')?.addEventListener('click', () => nudgeTilt(0.15))
+  document.getElementById('angleDown')?.addEventListener('click', () => nudgeTilt(-0.15))
   addEventListener('keydown', (e) => {
     if (e.key === ' ') { e.preventDefault(); d.paused = !d.paused }
-    if (e.key === '[') nudgeTilt(-0.1)
-    if (e.key === ']') nudgeTilt(0.1)
+    if (e.key === '[') nudgeTilt(-0.15)
+    if (e.key === ']') nudgeTilt(0.15)
   })
 
   let rtime = 0

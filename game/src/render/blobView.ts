@@ -6,7 +6,7 @@ const SP = CONFIG.spacing
 
 // 가짜 3D(2.5D): 화면 아래(y 큼)일수록 카메라에 가깝다 → 나중에 그리고(위 겹침) 살짝 크게.
 // TILT(0~1) = 카메라 앵글. 0=탑다운 평면, 클수록 비스듬히(원근 강조).
-let TILT = 0.5
+let TILT = 0 // 시작=평면. +로 기울인다.
 export const setTilt = (v: number): void => { TILT = Math.max(0, Math.min(1, v)) }
 export const getTilt = (): number => TILT
 export const perspScale = (y: number): number =>
