@@ -36,6 +36,7 @@ function buildCohort(spec: { kind: Cohort['kind']; men: number }, anchor: Vec, f
     target: null,
     spread: CONFIG.spreadDeployed,
     curSpeed: 0,
+    inMelee: false,
   }
 }
 
@@ -325,6 +326,7 @@ export function step(battle: Battle, dtMs: number): void {
   const dt = dtMs / 1000
   battle.time += dtMs
   battle.tick += 1
+  for (const s of ['A', 'B'] as Side[]) for (const c of battle.units[s].cohorts) c.inMelee = false
   if (battle.phase === 'ended') return
   if (battle.phase === 'rout') { stepRout(battle, dt); return }
 
@@ -344,6 +346,7 @@ export function step(battle: Battle, dtMs: number): void {
       const wMen = frontageOverlapMen(ca, cb, battle.terrain)
       if (wMen <= 0) continue
       contact = true
+      ca.inMelee = true; cb.inMelee = true
       applyMelee(ca, cb, wMen, dt, battle.terrain)
       applyMelee(cb, ca, wMen, dt, battle.terrain)
     }

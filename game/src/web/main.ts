@@ -2,7 +2,8 @@ import { Application, Container, Graphics, Sprite } from 'pixi.js'
 import { Director } from '../director'
 import { SCENARIOS } from '../scenarios'
 import { Camera } from '../render/camera'
-import { BlobView, perspScale, setTilt, getTilt } from '../render/blobView'
+import { perspScale, setTilt, getTilt } from '../render/blobView'
+import { loadSoldierClips, SoldierView } from '../render/soldier'
 import type { Cohort, Side, Unit } from '../sim/types'
 
 // 렌더 = sim(Director) 상태를 그림.  ?s=advance|charge|duel|hill|defile (기본 advance)
@@ -11,7 +12,7 @@ import type { Cohort, Side, Unit } from '../sim/types'
 const hud = document.getElementById('hud')!
 const KEY = new URLSearchParams(location.search).get('s') ?? 'advance'
 const COLOR: Record<Side, number> = { A: 0x5599ff, B: 0xff6655 }
-const CONDENSE = 4 // 병사 4명당 스프라이트 1 (FPS 체크용으로 다소 촘촘히)
+const CONDENSE = 8 // 병사 8명당 스프라이트 1
 
 async function main() {
   const app = new Application()
@@ -42,7 +43,7 @@ async function main() {
   for (let gy = -800; gy <= 800; gy += 100) terrain.moveTo(-1200, gy).lineTo(1200, gy)
   terrain.stroke({ color: 0x2c4a2a, width: 1, alpha: 0.6 })
 
-  const soldierTex = app.renderer.generateTexture(new Graphics().circle(0, 0, 5).fill(0xffffff).stroke({ color: 0x10240f, width: 1, alpha: 0.4 }))
+  const clips = await loadSoldierClips(import.meta.env.BASE_URL + 'sprites/shield/')
   const genTex = app.renderer.generateTexture(new Graphics().star(0, 0, 5, 9, 4).fill(0xffffff))
   const flagTex = app.renderer.generateTexture(new Graphics().rect(-4, -11, 8, 22).fill(0xffffff))
 
@@ -50,12 +51,12 @@ async function main() {
   units.sortableChildren = true // zIndex=y 로 깊이 정렬
   tiltLayer.addChild(units)
 
-  const views: { c: Cohort; v: BlobView }[] = []
+  const views: { c: Cohort; v: SoldierView }[] = []
   const gens: { u: Unit; s: Sprite }[] = []
   const flags: { u: Unit; s: Sprite }[] = []
   for (const side of ['A', 'B'] as Side[]) {
     const u = d.battle.units[side]
-    for (const c of u.cohorts) views.push({ c, v: new BlobView(units, soldierTex, COLOR[side], CONDENSE, c.aliveHP) })
+    for (const c of u.cohorts) views.push({ c, v: new SoldierView(units, clips, COLOR[side], CONDENSE, c.aliveHP) })
     const gs = new Sprite(genTex); gs.anchor.set(0.5); gs.tint = 0xffe08a
     units.addChild(gs); gens.push({ u, s: gs })
     const fs = new Sprite(flagTex); fs.anchor.set(0.5, 1); fs.tint = COLOR[side]
