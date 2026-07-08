@@ -9,17 +9,22 @@ const SP = CONFIG.spacing
 let TILT = 0 // 시작=평면. +로 기울인다.
 export const setTilt = (v: number): void => { TILT = Math.max(0, Math.min(1, v)) }
 export const getTilt = (): number => TILT
-// 원근을 앵글(TILT)에 비례 → 앵글 0 = 평면, 올릴수록 앞 크게/뒤 작게.
+// 크기 원근: 앵글↑ 이면 앞(아래) 크게 / 뒤(위) 작게.
 export const perspScale = (y: number): number =>
   1 + Math.max(-0.55, Math.min(0.8, (y / 900) * TILT * 2.5))
 
-// Y 위치도 같은 계수로 투영 → 멀수록 작아지며 소실점(중앙)으로 수렴(진짜 원근감).
-export const projectY = (y: number): number => y * perspScale(y)
+// 위치 투영: 대열을 눌러(압축) 겹치게 — 가까운 쪽은 밀집, 먼 쪽은 더 눌러 수렴.
+//  (크기와 분리: 앞은 커지되 벌어지지 않아 겹침 유지)
+export const projectY = (y: number): number => {
+  const far = Math.max(0, -y / 900) // 0=근, 커질수록 원
+  const compress = Math.max(0.3, 1 - TILT * (0.55 + far * 0.6))
+  return y * compress
+}
 
 // 탭 좌표(투영된 y) → sim y 역변환 (projectY가 단조 증가라 이분탐색).
 export const unprojectY = (sy: number): number => {
-  let lo = -6000, hi = 6000
-  for (let i = 0; i < 26; i++) { const m = (lo + hi) / 2; if (projectY(m) < sy) lo = m; else hi = m }
+  let lo = -8000, hi = 8000
+  for (let i = 0; i < 28; i++) { const m = (lo + hi) / 2; if (projectY(m) < sy) lo = m; else hi = m }
   return (lo + hi) / 2
 }
 
