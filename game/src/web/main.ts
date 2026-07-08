@@ -5,6 +5,7 @@ import { Camera } from '../render/camera'
 import { setTilt, getTilt } from '../render/blobView'
 import { loadClips, loadNamed, SoldierView, CharacterSprite } from '../render/soldier'
 import type { SoldierClips, Clear } from '../render/soldier'
+import { CommandController } from '../render/command'
 import { CONFIG } from '../data/config'
 import type { TroopKind } from '../data/units'
 import type { Cohort, Side, Unit } from '../sim/types'
@@ -79,12 +80,20 @@ async function main() {
     flags.push({ u, c: new CharacterSprite(units, flagClips, COLOR[side], 1.2) })
   }
 
+  // 개입 UI (플레이어 = A)
+  const cmd = new CommandController(tiltLayer, app.canvas, d.battle, () => d.paused, 'A')
+
+  // 액티브 포즈 토글(버튼 + space)
+  const pauseBtn = document.getElementById('pausebtn')
+  const togglePause = () => { d.paused = !d.paused; if (pauseBtn) pauseBtn.textContent = d.paused ? '▶ 재개' : '⏸ 명령' }
+  pauseBtn?.addEventListener('click', togglePause)
+
   // 카메라 앵글 버튼 + 키
   const nudgeTilt = (dv: number) => { setTilt(getTilt() + dv) } // 앵글은 ticker에서 매 프레임 적용
   document.getElementById('angleUp')?.addEventListener('click', () => nudgeTilt(0.15))
   document.getElementById('angleDown')?.addEventListener('click', () => nudgeTilt(-0.15))
   addEventListener('keydown', (e) => {
-    if (e.key === ' ') { e.preventDefault(); d.paused = !d.paused }
+    if (e.key === ' ') { e.preventDefault(); togglePause() }
     if (e.key === '0') nudgeTilt(0.15)  // 앵글 ↑
     if (e.key === '9') nudgeTilt(-0.15) // 앵글 ↓
   })
@@ -129,6 +138,7 @@ async function main() {
     for (const { u, c } of flags) {
       c.update(t.deltaMS, 'idle', u.flag.pos.x, u.flag.pos.y, u.side === 'A' ? 1 : -1)
     }
+    cmd.draw()
 
     const sprites = views.reduce((n, { c }) => n + Math.max(0, Math.ceil(c.aliveHP / CONDENSE)), 0)
     hud.textContent = hudText(d, t.FPS, sprites)

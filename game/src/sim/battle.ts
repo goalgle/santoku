@@ -205,7 +205,10 @@ function applyMelee(attacker: Cohort, target: Cohort, overlapMen: number, dt: nu
   const defCoef = coef(def.defense) * (isCharging(target) ? CONFIG.chargeDefMult : 1) // charge: 방어 보정
   // 고지 → 저지 하향 공격 +20% (doc/04 4.8)
   const hill = elevationAt(terrain, attacker.anchor) > elevationAt(terrain, target.anchor) ? CONFIG.hillAttackBonus : 1
-  const dps = attackUnits * coef(atk.atkSpeed) * (atkCoef / defCoef) * CONFIG.damageScale * hill
+  // 방어전념(doc/04 4.5.2): 공격자=데미지 0, 방어자=방어 2배
+  const attackerMul = attacker.stance === 'defend' ? 0 : 1
+  const defendBoost = target.stance === 'defend' ? 2 : 1
+  const dps = attackUnits * coef(atk.atkSpeed) * (atkCoef / (defCoef * defendBoost)) * CONFIG.damageScale * hill * attackerMul
   const dmg = Math.min(dps * dt, target.aliveHP)
   target.aliveHP -= dmg
   target.woundedHP += dmg * (1 - lethalityFrac(atk.lethal))

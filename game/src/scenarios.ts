@@ -10,6 +10,9 @@ const LEFT = Math.PI
 const HILL: Terrain = { name: '고지', hills: [{ x: -60, y: 0, radius: 70 }], chokeWidth: Infinity }
 
 export const SCENARIOS: Record<string, Scenario> = {
+  // 자유(개입 테스트): 대열 배치만, 스크립트 없음. 정지→A 병종 명령.
+  free: scene('자유 (개입 테스트)', V0_SNAPSHOT).duration(600).build(),
+
   // 컷신: 양측이 진격해 격돌
   advance: scene('컷신 · 진격 → 격돌', V0_SNAPSHOT)
     .at(0, place('A', 0, -300, 0, RIGHT), place('B', 0, 300, 0, LEFT), say('양측 방패 대치'))

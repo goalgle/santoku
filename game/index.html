@@ -13,10 +13,24 @@
     #ctrl button { width: 52px; height: 52px; font-size: 22px; border-radius: 10px; border: none;
                    background: rgba(0,0,0,.45); color: #dff; }
     #ctrl .lbl { align-self: center; color: #dff; font-size: 12px; text-shadow: 0 1px 2px #000; }
+    #pausebtn { position: fixed; left: 12px; bottom: 12px; z-index: 10; height: 52px; padding: 0 16px;
+                font-size: 15px; border-radius: 10px; border: none; background: rgba(0,0,0,.45); color: #dff; }
+    #cmdbar { position: fixed; left: 50%; bottom: 12px; transform: translateX(-50%); z-index: 10;
+              display: none; gap: 8px; }
+    #cmdbar button { height: 52px; padding: 0 18px; font-size: 16px; border-radius: 10px; border: none;
+                     background: rgba(0,0,0,.55); color: #dff; }
+    #cmdbar button.on { background: #cc9a2a; color: #201400; }
   </style>
 </head>
 <body>
   <div id="hud"></div>
+  <button id="pausebtn">⏸ 명령</button>
+  <div id="cmdbar">
+    <button id="cmdMove">이동</button>
+    <button id="cmdCharge">돌격</button>
+    <button id="cmdDefend">방어</button>
+    <button id="cmdCancel">취소</button>
+  </div>
   <div id="ctrl">
     <span class="lbl">앵글</span>
     <button id="angleDown">−</button>
