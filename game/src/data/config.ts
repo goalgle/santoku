@@ -5,6 +5,10 @@ export const CONFIG = {
   spacing: 12,             // 병사 간격(px/명) — 대형 물리 크기 환산
   flagHp: 500,             // 부대군기 HP (임시)
 
+  // 겹침 규칙 (doc/04 4.2.1 개정): 같은 진영=겹침 허용, 반대 진영=전면 가장자리만
+  formationDepthGap: 45,   // 같은 진영 병종 앞뒤 간격(작게=겹침. 방패 앞·창 바로 뒤)
+  edgeOverlap: 25,         // 반대 진영 전면 겹침 허용량(그 이상 통과 불가; 기병 돌격은 예외)
+
   // 전투 (doc/03 3.6.2)
   contactSlop: 20,         // 전면 접촉 판정 여유(px)
   attackUnit: 10,          // 폭 10명 = 공격 1단위

@@ -59,9 +59,9 @@ function buildUnit(side: Side, spec: UnitSpec): Unit {
     maxHp: CONFIG.flagHp,
     broken: false,
   }
-  // 대형 배치: 앞 병종(로스터 순)을 전면에, 나머지는 뒤로 스택 (doc/04 4.2.1)
+  // 대형 배치: 앞 병종(로스터 순)을 전면에, 나머지는 바로 뒤로 촘촘히 스택(같은 진영 겹침 허용)
   const facingDir = { x: Math.cos(spec.facing), y: Math.sin(spec.facing) }
-  const stepBack = CONFIG.depth * CONFIG.spacing + 20
+  const stepBack = CONFIG.formationDepthGap
   const cohorts = spec.cohorts.map((c) => buildCohort(c, spec.anchor, spec.facing))
   cohorts.forEach((c, i) => {
     c.anchor = { x: spec.anchor.x - facingDir.x * stepBack * i, y: spec.anchor.y - facingDir.y * stepBack * i }
@@ -321,6 +321,32 @@ function stepRout(battle: Battle, dt: number): void {
   if (battle.routTime >= CONFIG.routDuration) endBattle(battle)
 }
 
+// 반대 진영 충돌: 전면이 edgeOverlap 이상 겹치지 못하게 밀어냄(통과 불가). 기병 돌격은 예외(돌파).
+const frontExtent = (c: Cohort): number => (c.depth * CONFIG.spacing) / 2
+
+function resolveCollisions(battle: Battle): void {
+  for (const ca of battle.units.A.cohorts) {
+    if (ca.aliveHP <= 0) continue
+    for (const cb of battle.units.B.cohorts) {
+      if (cb.aliveHP <= 0) continue
+      if (isCharging(ca) || isCharging(cb)) continue // 돌격 = 돌파(통과 허용)
+      const minSep = frontExtent(ca) + frontExtent(cb) - CONFIG.edgeOverlap
+      const dx = cb.anchor.x - ca.anchor.x, dy = cb.anchor.y - ca.anchor.y
+      const d = Math.hypot(dx, dy)
+      if (d >= minSep || d < 0.01) continue
+      const nx = dx / d, ny = dy / d
+      const push = minSep - d
+      const aMove = ca.target !== null, bMove = cb.target !== null
+      // 미는 쪽(이동 중)이 막힌다. 양쪽 이동이면 반씩.
+      const ha = aMove && bMove ? push / 2 : aMove ? push : 0
+      const hb = aMove && bMove ? push / 2 : bMove ? push : 0
+      const rest = !aMove && !bMove ? push / 2 : 0 // 둘 다 정지+겹침이면 반씩 분리
+      ca.anchor.x -= nx * (ha + rest); ca.anchor.y -= ny * (ha + rest)
+      cb.anchor.x += nx * (hb + rest); cb.anchor.y += ny * (hb + rest)
+    }
+  }
+}
+
 /** 고정 timestep 한 틱. */
 export function step(battle: Battle, dtMs: number): void {
   const dt = dtMs / 1000
@@ -330,10 +356,11 @@ export function step(battle: Battle, dtMs: number): void {
   if (battle.phase === 'ended') return
   if (battle.phase === 'rout') { stepRout(battle, dt); return }
 
-  // 이동/회전
+  // 이동/회전 → 반대 진영 충돌 해소
   for (const side of ['A', 'B'] as Side[]) {
     for (const c of battle.units[side].cohorts) stepCohort(c, dt)
   }
+  resolveCollisions(battle)
 
   const beforeA = unitAlive(battle.units.A)
   const beforeB = unitAlive(battle.units.B)
