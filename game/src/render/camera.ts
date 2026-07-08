@@ -15,6 +15,9 @@ export class Camera {
     canvas.addEventListener('pointercancel', this.onUp)
   }
 
+  /** 화면 중앙 기준 확대/축소 (버튼용) */
+  zoomBy(factor: number) { this.zoomAt(window.innerWidth / 2, window.innerHeight / 2, factor) }
+
   private zoomAt(sx: number, sy: number, factor: number) {
     const w = this.world
     const wx = (sx - w.x) / w.scale.x

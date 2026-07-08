@@ -28,7 +28,7 @@ async function main() {
   world.position.set(app.screen.width / 2, app.screen.height / 2)
   world.scale.set(0.65)
   app.stage.addChild(world)
-  new Camera(world, app.canvas)
+  const camera = new Camera(world, app.canvas)
 
   // tiltLayer = 수직 압축(카메라 앵글)을 카메라 줌과 분리
   // tiltLayer: 좌표 그룹(원근은 이제 per-sprite projectY 로 처리 — 컨테이너 압축 없음)
@@ -86,10 +86,17 @@ async function main() {
   const togglePause = () => { d.paused = !d.paused; if (pauseBtn) pauseBtn.textContent = d.paused ? '▶ 재개' : '⏸ 명령' }
   pauseBtn?.addEventListener('click', togglePause)
 
-  // 카메라 앵글 버튼 + 키
-  const nudgeTilt = (dv: number) => { setTilt(getTilt() + dv) } // 앵글은 ticker에서 매 프레임 적용
+  // 카메라 앵글: 시작 5단계(0.75). 명령 모드=평면(0)으로 전환, 종료 시 복귀. (ticker에서 애니)
+  let baseTilt = 0.75
+  setTilt(baseTilt)
+  const nudgeTilt = (dv: number) => { baseTilt = Math.max(0, Math.min(1, baseTilt + dv)) }
   document.getElementById('angleUp')?.addEventListener('click', () => nudgeTilt(0.15))
   document.getElementById('angleDown')?.addEventListener('click', () => nudgeTilt(-0.15))
+
+  // 화면 중앙 기준 확대/축소
+  document.getElementById('zoomIn')?.addEventListener('click', () => camera.zoomBy(1.2))
+  document.getElementById('zoomOut')?.addEventListener('click', () => camera.zoomBy(1 / 1.2))
+
   addEventListener('keydown', (e) => {
     if (e.key === ' ') { e.preventDefault(); togglePause() }
     if (e.key === '0') nudgeTilt(0.15)  // 앵글 ↑
@@ -98,6 +105,9 @@ async function main() {
 
   let rtime = 0
   app.ticker.add((t) => {
+    // 앵글 애니: 명령 모드=평면(0), 아니면 선호 앵글(baseTilt)로 부드럽게
+    const tiltTarget = d.paused ? 0 : baseTilt
+    setTilt(getTilt() + (tiltTarget - getTilt()) * Math.min(1, (t.deltaMS / 1000) * 6))
     drawTerrain() // 지형(고지 원근 투영)
     if (!d.done) d.step(t.deltaMS)
     rtime += t.deltaMS / 1000
