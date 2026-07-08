@@ -3,7 +3,9 @@ import { Director } from '../director'
 import { SCENARIOS } from '../scenarios'
 import { Camera } from '../render/camera'
 import { perspScale, setTilt, getTilt } from '../render/blobView'
-import { loadSoldierClips, SoldierView } from '../render/soldier'
+import { loadClips, SoldierView } from '../render/soldier'
+import type { SoldierClips } from '../render/soldier'
+import type { TroopKind } from '../data/units'
 import type { Cohort, Side, Unit } from '../sim/types'
 
 // 렌더 = sim(Director) 상태를 그림.  ?s=advance|charge|duel|hill|defile (기본 advance)
@@ -44,7 +46,12 @@ async function main() {
   for (let gy = -800; gy <= 800; gy += 100) terrain.moveTo(-1200, gy).lineTo(1200, gy)
   terrain.stroke({ color: 0x2c4a2a, width: 1, alpha: 0.6 })
 
-  const clips = await loadSoldierClips(import.meta.env.BASE_URL + 'sprites/shield/')
+  // 병종별 스프라이트 로드
+  const base = import.meta.env.BASE_URL + 'sprites/'
+  const KINDS: TroopKind[] = ['shield', 'spear', 'bow', 'cavalry']
+  const clipsByKind = {} as Record<TroopKind, SoldierClips>
+  await Promise.all(KINDS.map(async (k) => { clipsByKind[k] = await loadClips(base, k) }))
+
   const genTex = app.renderer.generateTexture(new Graphics().star(0, 0, 5, 9, 4).fill(0xffffff))
   const flagTex = app.renderer.generateTexture(new Graphics().rect(-4, -11, 8, 22).fill(0xffffff))
 
@@ -57,7 +64,7 @@ async function main() {
   const flags: { u: Unit; s: Sprite }[] = []
   for (const side of ['A', 'B'] as Side[]) {
     const u = d.battle.units[side]
-    for (const c of u.cohorts) views.push({ c, v: new SoldierView(units, clips, COLOR[side], CONDENSE, c.aliveHP) })
+    for (const c of u.cohorts) views.push({ c, v: new SoldierView(units, clipsByKind[c.kind], COLOR[side], CONDENSE, c.aliveHP) })
     const gs = new Sprite(genTex); gs.anchor.set(0.5); gs.tint = 0xffe08a
     units.addChild(gs); gens.push({ u, s: gs })
     const fs = new Sprite(flagTex); fs.anchor.set(0.5, 1); fs.tint = COLOR[side]

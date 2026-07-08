@@ -1,5 +1,6 @@
 import { Assets, Container, Rectangle, Sprite, Texture } from 'pixi.js'
 import type { Cohort } from '../sim/types'
+import type { TroopKind } from '../data/units'
 import { CONFIG } from '../data/config'
 import { perspScale } from './blobView'
 
@@ -17,12 +18,21 @@ async function sliceStrip(url: string, n: number): Promise<Texture[]> {
   return out
 }
 
-export async function loadSoldierClips(dir: string): Promise<SoldierClips> {
+// 병종별 파일명 규칙. shield만 soldier_*, 나머지는 {unit}_*_sheet_{w}x64.
+function clipFile(kind: TroopKind, clip: string, frames: number): string {
+  if (kind === 'shield') return `shield/soldier_${clip}_sheet.png`
+  const p: Record<'spear' | 'bow' | 'cavalry', string> = {
+    spear: 'spearman/spearman', bow: 'archer/archer', cavalry: 'cavalry/cavalry',
+  }
+  return `${p[kind]}_${clip}_sheet_${frames * 64}x64.png`
+}
+
+export async function loadClips(baseUrl: string, kind: TroopKind): Promise<SoldierClips> {
   const [idle, walk, attack, dead] = await Promise.all([
-    sliceStrip(dir + 'soldier_idle_sheet.png', 4),
-    sliceStrip(dir + 'soldier_walk_sheet.png', 4),
-    sliceStrip(dir + 'soldier_attack_sheet.png', 4),
-    sliceStrip(dir + 'soldier_dead_sheet.png', 2),
+    sliceStrip(baseUrl + clipFile(kind, 'idle', 4), 4),
+    sliceStrip(baseUrl + clipFile(kind, 'walk', 4), 4),
+    sliceStrip(baseUrl + clipFile(kind, 'attack', 4), 4),
+    sliceStrip(baseUrl + clipFile(kind, 'dead', 2), 2),
   ])
   return {
     idle: { frames: idle, fps: 5, loop: true },
