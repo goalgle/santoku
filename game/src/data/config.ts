@@ -36,6 +36,7 @@ export const CONFIG = {
   generalMeleeForMorale: 10, // 근접 지속 N초 → 사기 1회↑ (기본 규칙)
   generalMoraleBoost: 5,
   generalStandbyHp: 0.5,   // 종료 시 HP비 ≥ → 대기(재출전) / 미만 → 부상·사망
+  generalSpace: 34,        // 아군 병사가 장수 주변에 두는 거리(렌더 — 존재감)
 
   // 도주/종료·정도 (doc/04 4.8)
   routDuration: 10,        // 도주 페이즈 상한(초)
@@ -62,7 +63,8 @@ export const CONFIG = {
   cavAccelTime: 2,         // 최대속도 도달 시간(초)
   cavArriveDist: 6,
   cavTurnRadiusMult: 20,   // 선회 반경 = 장수유닛 * 20
-  chargeThreshold: 0.9,    // 최대속도의 90%↑ → charge(공격 A→S·방어 보정)
+  chargeDistance: 150,     // 이동 거리 이 이상 → 자동 charge (돌격)
+  chargeBreakSpeed: 0.4,   // charge 중 curSpeed가 최대*이 값 밑이면 charge 파훼(창 저지 카운터)
   chargeDefMult: 1.2,      // charge 중 방어 보정
-  stopScale: 120,          // 저지: 상대 curSpeed 감소율(창 저지 A로 기병 감속→charge 무효)
+  stopScale: 120,          // 저지: 상대 curSpeed 감소율(창 저지 A로 기병 감속→charge 파훼)
 } as const

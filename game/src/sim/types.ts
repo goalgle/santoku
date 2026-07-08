@@ -20,6 +20,7 @@ export interface Cohort {
   spread: number     // 대형 폭 계수: 1=펼침, 이동 중 0.35로 모임
   curSpeed: number   // 현재 속도(기병 가속용). px/s
   inMelee: boolean   // 이번 틱 근접 교전 중인가 (렌더 공격 애니용)
+  chargeRun: boolean // 기병 돌격 중(이동거리 임계 초과로 발동, 저지로 파훼)
 }
 
 export type GeneralState = 'out' | 'rest' | 'standby' | 'lost' // 출진/휴식/대기/부상·사망

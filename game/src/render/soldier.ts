@@ -9,6 +9,7 @@ const F = 64 // 프레임 크기
 
 export interface Clip { frames: Texture[]; fps: number; loop: boolean }
 export interface SoldierClips { idle: Clip; walk: Clip; attack: Clip; dead: Clip }
+export interface Clear { cx: number; cy: number; r: number } // 병사를 밀어내는 원(결투장·장수 존재감)
 
 // 가로 스트립 PNG(64×64 프레임)를 프레임 배열로 슬라이스.
 async function sliceStrip(url: string, n: number): Promise<Texture[]> {
@@ -112,7 +113,7 @@ export class SoldierView {
     return this.clips.idle
   }
 
-  update(c: Cohort, dtMs: number, clear?: { cx: number; cy: number; r: number }): void {
+  update(c: Cohort, dtMs: number, clears?: Clear[]): void {
     const dt = dtMs / 1000
     this.time += dt
     const men = Math.max(0, c.aliveHP)
@@ -150,9 +151,9 @@ export class SoldierView {
       const ly = rows > 1 ? (row / (rows - 1) - 0.5) * 2 * halfD : 0
       let px = c.anchor.x + (-sin * lx + cos * ly)
       let py = c.anchor.y + (cos * lx + sin * ly) + Math.sin(this.time * 4 + stt.phase * 6) * 2
-      if (clear) {
-        const dx = px - clear.cx, dy = py - clear.cy, dd = Math.hypot(dx, dy)
-        if (dd < clear.r) { const k = clear.r / (dd || 1); px = clear.cx + dx * k; py = clear.cy + dy * k }
+      if (clears) for (const cl of clears) { // 결투장·장수 존재감: 원 안이면 가장자리로 밀어냄
+        const dx = px - cl.cx, dy = py - cl.cy, dd = Math.hypot(dx, dy)
+        if (dd < cl.r) { const k = cl.r / (dd || 1); px = cl.cx + dx * k; py = cl.cy + dy * k }
       }
       s.x = px; s.y = py; s.zIndex = py
       const sc = this.baseScale * perspScale(py)

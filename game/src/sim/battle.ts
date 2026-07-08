@@ -37,7 +37,15 @@ function buildCohort(spec: { kind: Cohort['kind']; men: number }, anchor: Vec, f
     spread: CONFIG.spreadDeployed,
     curSpeed: 0,
     inMelee: false,
+    chargeRun: false,
   }
+}
+
+/** 목표 설정 + 기병이면 이동 거리로 자동 돌격 판정 (doc/04 4.5.3) */
+export function setCohortTarget(c: Cohort, x: number, y: number): void {
+  c.target = { x, y }
+  c.stance = 'move'
+  c.chargeRun = c.kind === 'cavalry' && dist(c.anchor, { x, y }) > CONFIG.chargeDistance
 }
 
 function buildUnit(side: Side, spec: UnitSpec): Unit {
@@ -97,8 +105,7 @@ export function canCommand(unit: Unit, cohort: Cohort): boolean {
 export function moveCohort(unit: Unit, index: number, target: Vec): boolean {
   const c = unit.cohorts[index]
   if (!canCommand(unit, c)) return false
-  c.target = { ...target }
-  c.stance = 'move'
+  setCohortTarget(c, target.x, target.y)
   return true
 }
 
@@ -123,7 +130,7 @@ function stepCohort(c: Cohort, dt: number): void {
       const adv = c.curSpeed * dt
       c.anchor.x += Math.cos(c.facing) * adv // 항상 facing 방향으로 전진
       c.anchor.y += Math.sin(c.facing) * adv
-      if (d < CONFIG.cavArriveDist) { c.target = null; c.stance = 'idle' }
+      if (d < CONFIG.cavArriveDist) { c.target = null; c.stance = 'idle'; c.chargeRun = false }
     } else {
       // 보병: 제자리 회전(대열 유지) 후, 정렬되면 전진
       const turnSpeed = CONFIG.turnBase * coef(stats.turn)
@@ -185,9 +192,9 @@ function frontageOverlapMen(a: Cohort, b: Cohort, terrain: Terrain): number {
 /** 병종 최대 이동속도 */
 export const maxSpeed = (kind: Cohort['kind']): number => CONFIG.moveBase * coef(TROOPS[kind].move)
 
-/** 기병이 최대속도 근처 = charge 상태 (doc/04 4.5.3) */
+/** 기병 돌격 중 = 긴 이동 명령(chargeRun) 실행 중. 저지로 파훼되면 false (doc/04 4.5.3) */
 export const isCharging = (c: Cohort): boolean =>
-  c.kind === 'cavalry' && c.curSpeed >= CONFIG.chargeThreshold * maxSpeed('cavalry')
+  c.kind === 'cavalry' && c.chargeRun && c.target !== null
 
 /** attacker → target 근접 피해 1틱. 접전 폭 × 공속 × 공/방 → 전사/부상. charge·저지 반영. */
 function applyMelee(attacker: Cohort, target: Cohort, overlapMen: number, dt: number, terrain: Terrain): void {
@@ -202,8 +209,9 @@ function applyMelee(attacker: Cohort, target: Cohort, overlapMen: number, dt: nu
   const dmg = Math.min(dps * dt, target.aliveHP)
   target.aliveHP -= dmg
   target.woundedHP += dmg * (1 - lethalityFrac(atk.lethal))
-  // 저지: 공격자가 상대 속도를 늦춤 → 기병 감속 시 charge 무효. (기병=저지 E=거의 못 늦춤=돌파)
+  // 저지: 공격자가 상대 속도를 늦춤 → 기병이 충분히 감속되면 charge 파훼(창 저지 A 카운터).
   target.curSpeed = Math.max(0, target.curSpeed - coef(atk.stop) * CONFIG.stopScale * dt)
+  if (target.kind === 'cavalry' && target.curSpeed < CONFIG.chargeBreakSpeed * maxSpeed('cavalry')) target.chargeRun = false
 }
 
 // --- 궁병 사격 (doc/03 3.6.2): 정지 시만, 전열 병목 없이 사거리 내 전원 사격 ---

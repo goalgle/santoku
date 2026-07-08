@@ -1,6 +1,6 @@
 import type { Battle, Side, Terrain } from './sim/types'
 import type { Snapshot } from './snapshot'
-import { moveCohort } from './sim/battle'
+import { moveCohort, setCohortTarget } from './sim/battle'
 
 // 시나리오/컷신 스크립트 — 병종·장수·지형을 타임라인으로 제어.
 // 테스트와 컷신 연출이 같은 구조를 쓴다. 렌더는 Director로 이걸 재생한다.
@@ -19,9 +19,9 @@ export const place = (side: Side, idx: number, x: number, y: number, facing: num
 export const order = (side: Side, idx: number, x: number, y: number): Op =>
   (b) => { moveCohort(b.units[side], idx, { x, y }) }
 
-/** 목표 강제 지정(반경 무시 — 컷신 연출용) */
+/** 목표 강제 지정(반경 무시 — 컷신 연출용). 기병이면 거리로 자동 돌격 판정. */
 export const forceTo = (side: Side, idx: number, x: number, y: number): Op =>
-  (b) => { const c = b.units[side].cohorts[idx]; c.target = { x, y }; c.stance = 'move' }
+  (b) => setCohortTarget(b.units[side].cohorts[idx], x, y)
 
 export const setMight = (side: Side, v: number): Op => (b) => { b.units[side].general.might = v }
 export const placeGeneral = (side: Side, x: number, y: number): Op => (b) => { b.units[side].general.pos = { x, y } }

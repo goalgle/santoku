@@ -4,7 +4,8 @@ import { SCENARIOS } from '../scenarios'
 import { Camera } from '../render/camera'
 import { setTilt, getTilt } from '../render/blobView'
 import { loadClips, loadNamed, SoldierView, CharacterSprite } from '../render/soldier'
-import type { SoldierClips } from '../render/soldier'
+import type { SoldierClips, Clear } from '../render/soldier'
+import { CONFIG } from '../data/config'
 import type { TroopKind } from '../data/units'
 import type { Cohort, Side, Unit } from '../sim/types'
 
@@ -68,12 +69,12 @@ async function main() {
   units.sortableChildren = true // zIndex=y 로 깊이 정렬
   tiltLayer.addChild(units)
 
-  const views: { c: Cohort; v: SoldierView }[] = []
+  const views: { c: Cohort; v: SoldierView; side: Side }[] = []
   const gens: { u: Unit; c: CharacterSprite }[] = []
   const flags: { u: Unit; c: CharacterSprite }[] = []
   for (const side of ['A', 'B'] as Side[]) {
     const u = d.battle.units[side]
-    for (const c of u.cohorts) views.push({ c, v: new SoldierView(units, clipsByKind[c.kind], COLOR[side], CONDENSE, c.aliveHP) })
+    for (const c of u.cohorts) views.push({ c, v: new SoldierView(units, clipsByKind[c.kind], COLOR[side], CONDENSE, c.aliveHP), side })
     gens.push({ u, c: new CharacterSprite(units, generalClips, COLOR[side], 1.4) })
     flags.push({ u, c: new CharacterSprite(units, flagClips, COLOR[side], 1.2) })
   }
@@ -94,27 +95,35 @@ async function main() {
     if (!d.done) d.step(t.deltaMS)
     rtime += t.deltaMS / 1000
 
-    // 결투장 정리 원
+    // 결투장 정리 원(양측 다 물러남)
     const gA = d.battle.units.A.general, gB = d.battle.units.B.general
-    let clear: { cx: number; cy: number; r: number } | undefined
-    if (gA.state === 'out' && gB.state === 'out' &&
-        Math.hypot(gA.pos.x - gB.pos.x, gA.pos.y - gB.pos.y) < 120) {
+    const dueling = gA.state === 'out' && gB.state === 'out' &&
+      Math.hypot(gA.pos.x - gB.pos.x, gA.pos.y - gB.pos.y) < 120
+    let duelClear: Clear | undefined
+    if (dueling) {
       const grow = Math.min(1, Math.max(gA.meleeTime, gB.meleeTime) / 6)
-      clear = { cx: (gA.pos.x + gB.pos.x) / 2, cy: (gA.pos.y + gB.pos.y) / 2, r: 34 + grow * 60 }
+      duelClear = { cx: (gA.pos.x + gB.pos.x) / 2, cy: (gA.pos.y + gB.pos.y) / 2, r: 34 + grow * 60 }
+    }
+    // 장수 존재감: 결투 중이 아니면 아군 병사가 장수 주변에 거리를 둠
+    const clearsBySide: Record<Side, Clear[]> = { A: [], B: [] }
+    for (const side of ['A', 'B'] as Side[]) {
+      if (duelClear) { clearsBySide[side].push(duelClear); continue }
+      const g = d.battle.units[side].general
+      if (g.state === 'out') clearsBySide[side].push({ cx: g.pos.x, cy: g.pos.y, r: CONFIG.generalSpace })
     }
 
-    for (const { c, v } of views) v.update(c, t.deltaMS, clear)
+    for (const { c, v, side } of views) v.update(c, t.deltaMS, clearsBySide[side])
 
     for (const { u, c } of gens) {
       const g = u.general
       c.sprite.visible = g.state === 'out' || g.state === 'rest'
       let gx = g.pos.x, gy = g.pos.y
-      if (clear && g.state === 'out') { // 결투 중 서로 도는 연출
+      if (duelClear && g.state === 'out') { // 결투 중 서로 도는 연출
         const a = rtime * 3 + (u.side === 'A' ? 0 : Math.PI)
-        gx = clear.cx + Math.cos(a) * 14
-        gy = clear.cy + Math.sin(a) * 14
+        gx = duelClear.cx + Math.cos(a) * 14
+        gy = duelClear.cy + Math.sin(a) * 14
       }
-      const clip = clear && g.state === 'out' ? 'attack' : g.state === 'rest' ? 'walk' : 'idle'
+      const clip = duelClear && g.state === 'out' ? 'attack' : g.state === 'rest' ? 'walk' : 'idle'
       c.update(t.deltaMS, clip, gx, gy, u.side === 'A' ? 1 : -1)
     }
     for (const { u, c } of flags) {
