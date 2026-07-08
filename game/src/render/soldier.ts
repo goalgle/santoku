@@ -47,7 +47,7 @@ export class SoldierView {
     tint: number,
     private readonly condense: number,
     maxMen: number,
-    private readonly baseScale = 0.5,
+    private readonly baseScale = 1.0, // 캐릭터 크기(≈64px)
   ) {
     const maxS = Math.max(1, Math.ceil(maxMen / condense))
     for (let i = 0; i < maxS; i++) {

@@ -11,7 +11,8 @@ import type { Cohort, Side, Unit } from '../sim/types'
 
 const hud = document.getElementById('hud')!
 const KEY = new URLSearchParams(location.search).get('s') ?? 'advance'
-const COLOR: Record<Side, number> = { A: 0x5599ff, B: 0xff6655 }
+// 옅은 팀 틴트(스프라이트 디테일 보존 — 곱연산이라 밝을수록 원본 유지)
+const COLOR: Record<Side, number> = { A: 0xbcd4ff, B: 0xffc0b8 }
 const CONDENSE = 8 // 병사 8명당 스프라이트 1
 
 async function main() {
