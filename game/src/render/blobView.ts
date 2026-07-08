@@ -9,9 +9,19 @@ const SP = CONFIG.spacing
 let TILT = 0 // 시작=평면. +로 기울인다.
 export const setTilt = (v: number): void => { TILT = Math.max(0, Math.min(1, v)) }
 export const getTilt = (): number => TILT
-// 원근을 앵글(TILT)에 완전히 비례 → 앵글 0 = 평면(크기 균일), 올릴수록 앞 크게/뒤 작게.
+// 원근을 앵글(TILT)에 비례 → 앵글 0 = 평면, 올릴수록 앞 크게/뒤 작게.
 export const perspScale = (y: number): number =>
-  1 + Math.max(-0.7, Math.min(1.2, (y / 900) * TILT * 4.5))
+  1 + Math.max(-0.55, Math.min(0.8, (y / 900) * TILT * 2.5))
+
+// Y 위치도 같은 계수로 투영 → 멀수록 작아지며 소실점(중앙)으로 수렴(진짜 원근감).
+export const projectY = (y: number): number => y * perspScale(y)
+
+// 탭 좌표(투영된 y) → sim y 역변환 (projectY가 단조 증가라 이분탐색).
+export const unprojectY = (sy: number): number => {
+  let lo = -6000, hi = 6000
+  for (let i = 0; i < 26; i++) { const m = (lo + hi) / 2; if (projectY(m) < sy) lo = m; else hi = m }
+  return (lo + hi) / 2
+}
 
 // 하나의 Cohort를 스프라이트로 렌더. 스프라이트는 공유 정렬 컨테이너(sortableChildren)에 넣어
 // 매 프레임 zIndex=y 로 깊이 정렬한다. 상태의 소스는 sim(cohort).
@@ -60,9 +70,10 @@ export class BlobView {
         const dx = px - clear.cx, dy = py - clear.cy, dd = Math.hypot(dx, dy)
         if (dd < clear.r) { const k = clear.r / (dd || 1); px = clear.cx + dx * k; py = clear.cy + dy * k }
       }
+      const ry = projectY(py)       // Y 위치 원근 투영
       s.x = px
-      s.y = py
-      s.zIndex = py                 // 깊이 정렬(아래=앞)
+      s.y = ry
+      s.zIndex = ry                 // 깊이 정렬(아래=앞)
       s.scale.set(perspScale(py))   // 원근 크기
     }
   }

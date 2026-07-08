@@ -2,7 +2,7 @@ import { Assets, Container, Rectangle, Sprite, Texture } from 'pixi.js'
 import type { Cohort } from '../sim/types'
 import type { TroopKind } from '../data/units'
 import { CONFIG } from '../data/config'
-import { perspScale } from './blobView'
+import { perspScale, projectY } from './blobView'
 
 const SP = CONFIG.spacing
 const F = 64 // 프레임 크기
@@ -71,8 +71,9 @@ export class CharacterSprite {
     const n = clip.frames.length
     const fi = clip.loop ? Math.floor(this.time * clip.fps) % n : Math.min(n - 1, Math.floor(this.time * clip.fps))
     this.sprite.texture = clip.frames[fi]
-    this.sprite.position.set(x, y)
-    this.sprite.zIndex = y + 1 // 병사보다 살짝 앞
+    const ry = projectY(y)
+    this.sprite.position.set(x, ry)
+    this.sprite.zIndex = ry + 1 // 병사보다 살짝 앞
     const sc = this.scale * perspScale(y)
     this.sprite.scale.set(flip * sc, sc)
   }
@@ -155,7 +156,8 @@ export class SoldierView {
         const dx = px - cl.cx, dy = py - cl.cy, dd = Math.hypot(dx, dy)
         if (dd < cl.r) { const k = cl.r / (dd || 1); px = cl.cx + dx * k; py = cl.cy + dy * k }
       }
-      s.x = px; s.y = py; s.zIndex = py
+      const ry = projectY(py)
+      s.x = px; s.y = ry; s.zIndex = ry
       const sc = this.baseScale * perspScale(py)
       s.scale.set(flip * sc, sc)
       const n = clip.frames.length

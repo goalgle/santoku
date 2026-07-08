@@ -2,7 +2,7 @@ import { Application, Container, Graphics } from 'pixi.js'
 import { Director } from '../director'
 import { SCENARIOS } from '../scenarios'
 import { Camera } from '../render/camera'
-import { setTilt, getTilt } from '../render/blobView'
+import { setTilt, getTilt, projectY } from '../render/blobView'
 import { loadClips, loadNamed, SoldierView, CharacterSprite } from '../render/soldier'
 import type { SoldierClips, Clear } from '../render/soldier'
 import { CommandController } from '../render/command'
@@ -31,22 +31,20 @@ async function main() {
   new Camera(world, app.canvas)
 
   // tiltLayer = 수직 압축(카메라 앵글)을 카메라 줌과 분리
+  // tiltLayer: 좌표 그룹(원근은 이제 per-sprite projectY 로 처리 — 컨테이너 압축 없음)
   const tiltLayer = new Container()
   world.addChild(tiltLayer)
-  const applyTilt = () => { tiltLayer.scale.y = 1 - getTilt() * 0.6 } // 앵글↑ = 세로 압축↑
-  applyTilt()
 
   const scn = SCENARIOS[KEY] ?? SCENARIOS.advance
   const d = new Director(scn)
 
   const terrain = new Graphics()
   tiltLayer.addChild(terrain)
-  terrain.rect(-2000, -1200, 4000, 2400).fill(0x3f5e3a)
-  for (const h of d.battle.terrain.hills) terrain.ellipse(h.x, h.y, h.radius, h.radius * 0.7).fill(0x63763f)
-  // 바닥 격자(틸트/원근 확인용) — 앵글 올리면 세로 간격이 압축돼 기울어 보임
-  for (let gx = -1200; gx <= 1200; gx += 100) terrain.moveTo(gx, -800).lineTo(gx, 800)
-  for (let gy = -800; gy <= 800; gy += 100) terrain.moveTo(-1200, gy).lineTo(1200, gy)
-  terrain.stroke({ color: 0x2c4a2a, width: 1, alpha: 0.6 })
+  const drawTerrain = () => { // 매 프레임: 지형(고지 y도 원근 투영)
+    terrain.clear()
+    terrain.rect(-2000, -1200, 4000, 2400).fill(0x3f5e3a)
+    for (const h of d.battle.terrain.hills) terrain.ellipse(h.x, projectY(h.y), h.radius, h.radius * 0.7).fill(0x63763f)
+  }
 
   // 병종별 스프라이트 로드
   const base = import.meta.env.BASE_URL + 'sprites/'
@@ -100,7 +98,7 @@ async function main() {
 
   let rtime = 0
   app.ticker.add((t) => {
-    tiltLayer.scale.y = 1 - getTilt() * 0.6 // 앵글을 매 프레임 강제 적용(놓칠 여지 제거)
+    drawTerrain() // 지형(고지 원근 투영)
     if (!d.done) d.step(t.deltaMS)
     rtime += t.deltaMS / 1000
 

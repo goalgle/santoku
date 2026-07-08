@@ -1,6 +1,7 @@
 import { Container, Graphics } from 'pixi.js'
 import type { Battle, Side, Vec } from '../sim/types'
 import { moveCohort, canCommand } from '../sim/battle'
+import { projectY, unprojectY } from './blobView'
 
 type Mode = 'move' | 'charge'
 
@@ -51,7 +52,7 @@ export class CommandController {
     if (multi || !dp) return
     if (Math.hypot(e.offsetX - dp.x, e.offsetY - dp.y) > 8 || performance.now() - this.downT > 350) return
     const p = this.layer.toLocal({ x: e.offsetX, y: e.offsetY })
-    this.onTap({ x: p.x, y: p.y })
+    this.onTap({ x: p.x, y: unprojectY(p.y) }) // 투영된 화면 y → sim y
   }
 
   private pick(pt: Vec): number | null {
@@ -109,17 +110,20 @@ export class CommandController {
     g.clear()
     if (!this.isPaused()) { if (this.selected !== null) this.deselect(); return }
     const u = this.unit
-    g.circle(u.flag.pos.x, u.flag.pos.y, u.flag.commandRadius).stroke({ color: 0x88ff88, width: 2, alpha: 0.35 })
+    // 투영된 y로 그려 스프라이트와 정합
+    g.circle(u.flag.pos.x, projectY(u.flag.pos.y), u.flag.commandRadius).stroke({ color: 0x88ff88, width: 2, alpha: 0.35 })
     u.cohorts.forEach((c, i) => {
       if (c.aliveHP <= 0) return
+      const ay = projectY(c.anchor.y)
       if (c.target) { // 예약된 목표
-        g.moveTo(c.anchor.x, c.anchor.y).lineTo(c.target.x, c.target.y).stroke({ color: 0xffee55, width: 2, alpha: 0.6 })
-        g.circle(c.target.x, c.target.y, 8).stroke({ color: 0xffee55, width: 2 })
+        const ty = projectY(c.target.y)
+        g.moveTo(c.anchor.x, ay).lineTo(c.target.x, ty).stroke({ color: 0xffee55, width: 2, alpha: 0.6 })
+        g.circle(c.target.x, ty, 8).stroke({ color: 0xffee55, width: 2 })
       }
       const ok = canCommand(u, c)
       const col = c.stance === 'defend' ? 0x66ccff : ok ? 0xffffff : 0x888888
-      g.circle(c.anchor.x, c.anchor.y, 22).stroke({ color: col, width: 2, alpha: ok ? 0.5 : 0.2 })
-      if (i === this.selected) g.circle(c.anchor.x, c.anchor.y, 30).stroke({ color: 0xffee55, width: 3 })
+      g.circle(c.anchor.x, ay, 22).stroke({ color: col, width: 2, alpha: ok ? 0.5 : 0.2 })
+      if (i === this.selected) g.circle(c.anchor.x, ay, 30).stroke({ color: 0xffee55, width: 3 })
     })
   }
 }
