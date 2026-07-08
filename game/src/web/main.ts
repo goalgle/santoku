@@ -1,9 +1,9 @@
-import { Application, Container, Graphics, Sprite } from 'pixi.js'
+import { Application, Container, Graphics } from 'pixi.js'
 import { Director } from '../director'
 import { SCENARIOS } from '../scenarios'
 import { Camera } from '../render/camera'
-import { perspScale, setTilt, getTilt } from '../render/blobView'
-import { loadClips, SoldierView } from '../render/soldier'
+import { setTilt, getTilt } from '../render/blobView'
+import { loadClips, loadNamed, SoldierView, CharacterSprite } from '../render/soldier'
 import type { SoldierClips } from '../render/soldier'
 import type { TroopKind } from '../data/units'
 import type { Cohort, Side, Unit } from '../sim/types'
@@ -52,23 +52,30 @@ async function main() {
   const clipsByKind = {} as Record<TroopKind, SoldierClips>
   await Promise.all(KINDS.map(async (k) => { clipsByKind[k] = await loadClips(base, k) }))
 
-  const genTex = app.renderer.generateTexture(new Graphics().star(0, 0, 5, 9, 4).fill(0xffffff))
-  const flagTex = app.renderer.generateTexture(new Graphics().rect(-4, -11, 8, 22).fill(0xffffff))
+  // 장수·부대군기(깃발병) 클립
+  const generalClips = await loadNamed(base, [
+    { name: 'idle', file: 'general/general_idle_sheet_256x64.png', frames: 4, fps: 5, loop: true },
+    { name: 'walk', file: 'general/general_walk_sheet_256x64.png', frames: 4, fps: 10, loop: true },
+    { name: 'attack', file: 'general/general_attack_sheet_256x64.png', frames: 4, fps: 12, loop: true },
+    { name: 'dead', file: 'general/general_dead_sheet_128x64.png', frames: 2, fps: 8, loop: false },
+  ])
+  const flagClips = await loadNamed(base, [
+    { name: 'idle', file: 'flagbearer/flagbearer_idle_sheet_256x64.png', frames: 4, fps: 4, loop: true },
+    { name: 'dead', file: 'flagbearer/flagbearer_dead_sheet_128x64.png', frames: 2, fps: 8, loop: false },
+  ])
 
   const units = new Container()
   units.sortableChildren = true // zIndex=y 로 깊이 정렬
   tiltLayer.addChild(units)
 
   const views: { c: Cohort; v: SoldierView }[] = []
-  const gens: { u: Unit; s: Sprite }[] = []
-  const flags: { u: Unit; s: Sprite }[] = []
+  const gens: { u: Unit; c: CharacterSprite }[] = []
+  const flags: { u: Unit; c: CharacterSprite }[] = []
   for (const side of ['A', 'B'] as Side[]) {
     const u = d.battle.units[side]
     for (const c of u.cohorts) views.push({ c, v: new SoldierView(units, clipsByKind[c.kind], COLOR[side], CONDENSE, c.aliveHP) })
-    const gs = new Sprite(genTex); gs.anchor.set(0.5); gs.tint = 0xffe08a
-    units.addChild(gs); gens.push({ u, s: gs })
-    const fs = new Sprite(flagTex); fs.anchor.set(0.5, 1); fs.tint = COLOR[side]
-    units.addChild(fs); flags.push({ u, s: fs })
+    gens.push({ u, c: new CharacterSprite(units, generalClips, COLOR[side], 1.4) })
+    flags.push({ u, c: new CharacterSprite(units, flagClips, COLOR[side], 1.2) })
   }
 
   // 카메라 앵글 버튼 + 키
@@ -98,22 +105,20 @@ async function main() {
 
     for (const { c, v } of views) v.update(c, t.deltaMS, clear)
 
-    for (const { u, s } of gens) {
-      s.visible = u.general.state === 'out' || u.general.state === 'rest'
-      let gx = u.general.pos.x, gy = u.general.pos.y
-      if (clear && u.general.state === 'out') {
+    for (const { u, c } of gens) {
+      const g = u.general
+      c.sprite.visible = g.state === 'out' || g.state === 'rest'
+      let gx = g.pos.x, gy = g.pos.y
+      if (clear && g.state === 'out') { // 결투 중 서로 도는 연출
         const a = rtime * 3 + (u.side === 'A' ? 0 : Math.PI)
         gx = clear.cx + Math.cos(a) * 14
         gy = clear.cy + Math.sin(a) * 14
       }
-      s.position.set(gx, gy)
-      s.zIndex = gy + 1
-      s.scale.set(1.5 * perspScale(gy))
+      const clip = clear && g.state === 'out' ? 'attack' : g.state === 'rest' ? 'walk' : 'idle'
+      c.update(t.deltaMS, clip, gx, gy, u.side === 'A' ? 1 : -1)
     }
-    for (const { u, s } of flags) {
-      s.position.set(u.flag.pos.x, u.flag.pos.y)
-      s.zIndex = u.flag.pos.y
-      s.scale.set(perspScale(u.flag.pos.y))
+    for (const { u, c } of flags) {
+      c.update(t.deltaMS, 'idle', u.flag.pos.x, u.flag.pos.y, u.side === 'A' ? 1 : -1)
     }
 
     const sprites = views.reduce((n, { c }) => n + Math.max(0, Math.ceil(c.aliveHP / CONDENSE)), 0)

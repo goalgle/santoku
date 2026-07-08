@@ -42,6 +42,41 @@ export async function loadClips(baseUrl: string, kind: TroopKind): Promise<Soldi
   }
 }
 
+// 범용 클립 로더(장수·깃발병처럼 파일명이 제각각인 경우)
+export async function loadNamed(
+  baseUrl: string,
+  entries: { name: string; file: string; frames: number; fps: number; loop: boolean }[],
+): Promise<Record<string, Clip>> {
+  const out: Record<string, Clip> = {}
+  await Promise.all(entries.map(async (e) => {
+    out[e.name] = { frames: await sliceStrip(baseUrl + e.file, e.frames), fps: e.fps, loop: e.loop }
+  }))
+  return out
+}
+
+// 단일 캐릭터(장수·부대군기) 애니 스프라이트.
+export class CharacterSprite {
+  readonly sprite: Sprite
+  private time = 0
+  constructor(parent: Container, private readonly clips: Record<string, Clip>, tint: number, private readonly scale = 1) {
+    this.sprite = new Sprite(clips.idle.frames[0])
+    this.sprite.anchor.set(0.5, 1) // 발밑
+    this.sprite.tint = tint
+    parent.addChild(this.sprite)
+  }
+  update(dtMs: number, clipName: string, x: number, y: number, flip = 1): void {
+    this.time += dtMs / 1000
+    const clip = this.clips[clipName] ?? this.clips.idle
+    const n = clip.frames.length
+    const fi = clip.loop ? Math.floor(this.time * clip.fps) % n : Math.min(n - 1, Math.floor(this.time * clip.fps))
+    this.sprite.texture = clip.frames[fi]
+    this.sprite.position.set(x, y)
+    this.sprite.zIndex = y + 1 // 병사보다 살짝 앞
+    const sc = this.scale * perspScale(y)
+    this.sprite.scale.set(flip * sc, sc)
+  }
+}
+
 interface St { phase: number; dying: boolean; dieT: number }
 
 // 병종 덩어리를 애니 병사 스프라이트로 렌더. 상태(idle/walk/attack/dead)를 sim에서 읽어 클립 선택.
