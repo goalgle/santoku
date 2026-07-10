@@ -60,6 +60,11 @@ export const CONFIG = {
   // 장수 반경 (doc/03 3.2.1): 통솔·지력 100 → 장수유닛 30배
   generalUnitSize: 10,
   radiusPer100: 30,
+  flagRadiusMult: 2,       // 명령반경 2배 상향(게임플레이)
+  flagSpeed: 70,           // 부대군기 이동(보병 1/2)
+  flagBackOffset: 90,      // 군기를 대열 뒤(적 반대쪽)에 유지
+  bowTooClose: 170,        // 궁병: 적이 이 거리 안이면 후퇴
+  bowKeepRange: 0.75,      // 궁병: 사거리*이 값 거리 유지
 
   // 이동/회전 (doc/04 4.5.3): 등급 배율(0.5~1.0)에 곱하는 기준값
   moveBase: 140,           // px/s @ 배율 1.0

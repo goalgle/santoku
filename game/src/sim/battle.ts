@@ -22,7 +22,7 @@ const elevationAt = (terrain: Terrain, p: Vec): number => {
 
 /** 통솔 → 지휘 반경 (doc/03 3.2.1): 100 → 장수유닛 30배 */
 export function commandRadius(command: number): number {
-  return (command / 100) * CONFIG.radiusPer100 * CONFIG.generalUnitSize
+  return (command / 100) * CONFIG.radiusPer100 * CONFIG.generalUnitSize * CONFIG.flagRadiusMult
 }
 
 function buildCohort(spec: { kind: Cohort['kind']; men: number }, anchor: Vec, facing: number): Cohort {

@@ -8,6 +8,8 @@ import type { SoldierClips, Clear } from '../render/soldier'
 import { CommandController, AbilityBar } from '../render/command'
 import { setCohortTarget, useAbility, nearestEnemy } from '../sim/battle'
 import { CONFIG } from '../data/config'
+import { coef } from '../data/grades'
+import { TROOPS } from '../data/units'
 import type { TroopKind } from '../data/units'
 import type { Cohort, Side, Unit } from '../sim/types'
 
@@ -85,20 +87,50 @@ async function main() {
   const moraleGfx = new Graphics()
   tiltLayer.addChild(moraleGfx)
 
-  // 간단 AI: 양측 유휴 병종은 가장 가까운 적으로 자동 진격, B는 가끔 어빌리티
+  // 간단 AI: 병종 이동(궁병 카이팅) + 부대군기 이동(아군에 붙되 적 반대쪽 뒤로) + B 어빌리티
+  const BOW_RANGE = CONFIG.rangeBase * coef(TROOPS.bow.range)
   let aiTimer = 0
   const AB = ['defend', 'advance', 'volley', 'charge'] as const
   const runAI = (dt: number) => {
     const b = d.battle
     if (b.phase !== 'deploy' && b.phase !== 'engage') return
     for (const side of ['A', 'B'] as Side[]) {
-      const cs = b.units[side].cohorts
+      const u = b.units[side]
+      const cs = u.cohorts
+
       for (const c of cs) {
-        if (c.aliveHP <= 0 || c.ability || c.target || c.inMelee) continue
+        if (c.aliveHP <= 0 || c.ability) continue
         const foe = nearestEnemy(b, side, c.anchor)
-        if (foe) setCohortTarget(c, foe.anchor.x, foe.anchor.y)
+        if (!foe) continue
+        const dd = Math.hypot(foe.anchor.x - c.anchor.x, foe.anchor.y - c.anchor.y)
+        if (c.kind === 'bow') { // 카이팅: 사거리 유지, 붙으면 후퇴
+          const ax = c.anchor.x - foe.anchor.x, ay = c.anchor.y - foe.anchor.y, al = Math.hypot(ax, ay) || 1
+          if (dd < CONFIG.bowTooClose) setCohortTarget(c, c.anchor.x + (ax / al) * 100, c.anchor.y + (ay / al) * 100)
+          else if (dd > BOW_RANGE) setCohortTarget(c, foe.anchor.x + (ax / al) * (BOW_RANGE * CONFIG.bowKeepRange), foe.anchor.y + (ay / al) * (BOW_RANGE * CONFIG.bowKeepRange))
+          else c.target = null // 사거리 안·안전 → 정지 사격
+          continue
+        }
+        if (c.target || c.inMelee) continue // 나머지: 유휴면 진격
+        setCohortTarget(c, foe.anchor.x, foe.anchor.y)
+      }
+
+      // 부대군기: 아군 중심에 붙되 적 반대쪽 뒤로(반경이 대열을 따라감)
+      const alive = cs.filter((c) => c.aliveHP > 0)
+      if (alive.length) {
+        const cx = alive.reduce((s, c) => s + c.anchor.x, 0) / alive.length
+        const cy = alive.reduce((s, c) => s + c.anchor.y, 0) / alive.length
+        const ef = nearestEnemy(b, side, { x: cx, y: cy })
+        let tx = cx, ty = cy
+        if (ef) {
+          const ax = cx - ef.anchor.x, ay = cy - ef.anchor.y, al = Math.hypot(ax, ay) || 1
+          tx = cx + (ax / al) * CONFIG.flagBackOffset; ty = cy + (ay / al) * CONFIG.flagBackOffset
+        }
+        const f = u.flag.pos
+        const dx = tx - f.x, dy = ty - f.y, fd = Math.hypot(dx, dy)
+        if (fd > 2) { const s = Math.min(fd, CONFIG.flagSpeed * dt); f.x += (dx / fd) * s; f.y += (dy / fd) * s }
       }
     }
+
     aiTimer += dt
     if (aiTimer > 3.5) { aiTimer = 0; const i = Math.floor(Math.random() * 4); useAbility(b, 'B', i, AB[i]) }
   }
