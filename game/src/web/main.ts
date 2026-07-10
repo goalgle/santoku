@@ -5,7 +5,7 @@ import { Camera } from '../render/camera'
 import { setTilt, getTilt, projectY } from '../render/blobView'
 import { loadClips, loadNamed, SoldierView, CharacterSprite } from '../render/soldier'
 import type { SoldierClips, Clear } from '../render/soldier'
-import { CommandController } from '../render/command'
+import { CommandController, AbilityBar } from '../render/command'
 import { CONFIG } from '../data/config'
 import type { TroopKind } from '../data/units'
 import type { Cohort, Side, Unit } from '../sim/types'
@@ -78,8 +78,9 @@ async function main() {
     flags.push({ u, c: new CharacterSprite(units, flagClips, COLOR[side], 1.2) })
   }
 
-  // 개입 UI (플레이어 = A)
+  // 개입 UI (플레이어 = A): 어빌리티 바(주) + 탭 이동(위치 미세조정)
   const cmd = new CommandController(tiltLayer, app.canvas, d.battle, () => d.paused, 'A')
+  const abilityBar = new AbilityBar(d.battle, 'A')
 
   // 액티브 포즈 토글(버튼 + space)
   const pauseBtn = document.getElementById('pausebtn')
@@ -147,6 +148,7 @@ async function main() {
       c.update(t.deltaMS, 'idle', u.flag.pos.x, u.flag.pos.y, u.side === 'A' ? 1 : -1)
     }
     cmd.draw()
+    abilityBar.update()
 
     const sprites = views.reduce((n, { c }) => n + Math.max(0, Math.ceil(c.aliveHP / CONDENSE)), 0)
     hud.textContent = hudText(d, t.FPS, sprites)

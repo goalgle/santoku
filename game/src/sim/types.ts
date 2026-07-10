@@ -21,7 +21,12 @@ export interface Cohort {
   curSpeed: number   // 현재 속도(기병 가속용). px/s
   inMelee: boolean   // 이번 틱 근접 교전 중인가 (렌더 공격 애니용)
   chargeRun: boolean // 기병 돌격 중(이동거리 임계 초과로 발동, 저지로 파훼)
+  stamina: number    // 어빌리티 자원 0~100
+  ability: Ability | null // 발동 중인 어빌리티
 }
+
+export type AbilityType = 'defend' | 'advance' | 'charge' | 'volley'
+export interface Ability { type: AbilityType; timer: number; phase: 'out' | 'back'; origin: Vec }
 
 export type GeneralState = 'out' | 'rest' | 'standby' | 'lost' // 출진/휴식/대기/부상·사망
 export interface General {

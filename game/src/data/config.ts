@@ -38,6 +38,18 @@ export const CONFIG = {
   generalStandbyHp: 0.5,   // 종료 시 HP비 ≥ → 대기(재출전) / 미만 → 부상·사망
   generalSpace: 34,        // 아군 병사가 장수 주변에 두는 거리(렌더 — 존재감)
 
+  // 전술 어빌리티 + 스태미너 (전술 어빌리티 모델)
+  staminaMax: 100,
+  staminaRegen: 12,        // 초당 회복
+  ability: {
+    defend:  { cost: 30, dur: 2 },  // 방패: 2초 방어전념
+    advance: { cost: 35, dur: 2 },  // 창: 2초 전진 공격
+    charge:  { cost: 55, dur: 3 },  // 기병: 돌진→돌파→귀환
+    volley:  { cost: 30, dur: 2 },  // 궁: 2초 일제사
+  },
+  advanceAtkBoost: 1.3,    // 전진 공격 공속 부스트
+  volleyMul: 2,            // 일제사 화력 배율
+
   // 도주/종료·정도 (doc/04 4.8)
   routDuration: 10,        // 도주 페이즈 상한(초)
   routKillRate: 0.03,      // 도주 중 초당 사상 비율(속수무책)

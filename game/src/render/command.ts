@@ -1,7 +1,40 @@
 import { Container, Graphics } from 'pixi.js'
-import type { Battle, Side, Vec } from '../sim/types'
-import { moveCohort, canCommand } from '../sim/battle'
+import type { Battle, Side, Vec, AbilityType } from '../sim/types'
+import { moveCohort, canCommand, useAbility } from '../sim/battle'
+import { CONFIG } from '../data/config'
 import { projectY, unprojectY } from './blobView'
+
+// 어빌리티 바: 병종별 시그니처 어빌리티(방어/공격/일제사/돌진) 버튼 + 스태미너. 정지·실시간 둘 다.
+const BAR: { id: string; type: AbilityType; idx: number }[] = [
+  { id: 'abDefend', type: 'defend', idx: 0 },  // 방패
+  { id: 'abAdvance', type: 'advance', idx: 1 }, // 창
+  { id: 'abVolley', type: 'volley', idx: 2 },   // 궁
+  { id: 'abCharge', type: 'charge', idx: 3 },   // 기병
+]
+
+export class AbilityBar {
+  private readonly items: { type: AbilityType; idx: number; el: HTMLButtonElement }[] = []
+  constructor(private readonly battle: Battle, private readonly side: Side = 'A') {
+    for (const b of BAR) {
+      const el = document.getElementById(b.id) as HTMLButtonElement | null
+      if (!el) continue
+      el.addEventListener('click', () => useAbility(this.battle, this.side, b.idx, b.type))
+      this.items.push({ type: b.type, idx: b.idx, el })
+    }
+  }
+  update(): void {
+    const u = this.battle.units[this.side]
+    for (const it of this.items) {
+      const c = u.cohorts[it.idx]
+      const cost = CONFIG.ability[it.type].cost
+      const active = c.ability?.type === it.type
+      it.el.disabled = !active && (c.aliveHP <= 0 || !!c.ability || c.stamina < cost || !canCommand(u, c))
+      it.el.classList.toggle('active', active)
+      const pct = Math.round((c.stamina / CONFIG.staminaMax) * 100)
+      it.el.style.background = `linear-gradient(to top, rgba(80,170,90,.8) ${pct}%, rgba(0,0,0,.5) ${pct}%)`
+    }
+  }
+}
 
 type Mode = 'move' | 'charge'
 

@@ -1,4 +1,5 @@
-import type { Battle, Cohort, Flag, General, Side, Terrain, Unit, Vec } from './types'
+import type { AbilityType, Battle, Cohort, Flag, General, Side, Terrain, Unit, Vec } from './types'
+import type { TroopKind } from '../data/units'
 import { makeRng } from './rng'
 import { angleDiff, approachAngle, dist } from './mathutil'
 import type { Snapshot, UnitSpec } from '../snapshot'
@@ -38,6 +39,8 @@ function buildCohort(spec: { kind: Cohort['kind']; men: number }, anchor: Vec, f
     curSpeed: 0,
     inMelee: false,
     chargeRun: false,
+    stamina: CONFIG.staminaMax,
+    ability: null,
   }
 }
 
@@ -107,6 +110,65 @@ export function moveCohort(unit: Unit, index: number, target: Vec): boolean {
   if (!canCommand(unit, c)) return false
   setCohortTarget(c, target.x, target.y)
   return true
+}
+
+// --- 전술 어빌리티 (전술 어빌리티 모델) ---
+
+const ABILITY_KIND: Record<AbilityType, TroopKind> = { defend: 'shield', advance: 'spear', charge: 'cavalry', volley: 'bow' }
+
+function nearestEnemy(battle: Battle, side: Side, from: Vec): Cohort | null {
+  const foe: Side = side === 'A' ? 'B' : 'A'
+  let best: Cohort | null = null, bestD = Infinity
+  for (const e of battle.units[foe].cohorts) {
+    if (e.aliveHP <= 0) continue
+    const d = dist(from, e.anchor)
+    if (d < bestD) { bestD = d; best = e }
+  }
+  return best
+}
+
+/** 어빌리티 발동. 병종·반경·스태미너·중복 확인 후 소모/시작. 성공 여부 반환. */
+export function useAbility(battle: Battle, side: Side, index: number, type: AbilityType): boolean {
+  const unit = battle.units[side]
+  const c = unit.cohorts[index]
+  const def = CONFIG.ability[type]
+  if (c.kind !== ABILITY_KIND[type] || c.aliveHP <= 0 || c.ability || c.stamina < def.cost || !canCommand(unit, c)) return false
+  c.stamina -= def.cost
+  c.ability = { type, timer: def.dur, phase: 'out', origin: { ...c.anchor } }
+  const foe = nearestEnemy(battle, side, c.anchor)
+  if (type === 'defend') c.stance = 'defend'
+  else if (type === 'volley') c.target = null // 정지 사격
+  else if (foe) {
+    if (type === 'advance') setCohortTarget(c, foe.anchor.x, foe.anchor.y)
+    else if (type === 'charge') { // 적을 뚫고 지나가는 지점까지
+      const dx = foe.anchor.x - c.anchor.x, dy = foe.anchor.y - c.anchor.y
+      const l = Math.hypot(dx, dy) || 1
+      setCohortTarget(c, foe.anchor.x + (dx / l) * 120, foe.anchor.y + (dy / l) * 120)
+      c.chargeRun = true
+    }
+  }
+  return true
+}
+
+function endAbility(c: Cohort): void {
+  const t = c.ability?.type
+  if (t === 'defend') c.stance = 'idle'
+  if (t === 'advance' || t === 'charge') { c.target = null; c.stance = 'idle'; c.chargeRun = false }
+  c.ability = null
+}
+
+/** 스태미너 회복 + 어빌리티 진행(돌진 귀환 등). 매 틱 병종별로. */
+function stepAbility(c: Cohort, dt: number): void {
+  c.stamina = Math.min(CONFIG.staminaMax, c.stamina + CONFIG.staminaRegen * dt)
+  const a = c.ability
+  if (!a) return
+  a.timer -= dt
+  if (a.type === 'charge' && a.phase === 'out' && a.timer <= CONFIG.ability.charge.dur / 2) {
+    a.phase = 'back' // 절반 지나면 출발점으로 귀환(선회)
+    setCohortTarget(c, a.origin.x, a.origin.y)
+    c.chargeRun = true
+  }
+  if (a.timer <= 0) endAbility(c)
 }
 
 // --- 틱 ---
@@ -208,7 +270,8 @@ function applyMelee(attacker: Cohort, target: Cohort, overlapMen: number, dt: nu
   // 방어전념(doc/04 4.5.2): 공격자=데미지 0, 방어자=방어 2배
   const attackerMul = attacker.stance === 'defend' ? 0 : 1
   const defendBoost = target.stance === 'defend' ? 2 : 1
-  const dps = attackUnits * coef(atk.atkSpeed) * (atkCoef / (defCoef * defendBoost)) * CONFIG.damageScale * hill * attackerMul
+  const advanceMul = attacker.ability?.type === 'advance' ? CONFIG.advanceAtkBoost : 1 // 전진 공격 부스트
+  const dps = attackUnits * coef(atk.atkSpeed) * (atkCoef / (defCoef * defendBoost)) * CONFIG.damageScale * hill * attackerMul * advanceMul
   const dmg = Math.min(dps * dt, target.aliveHP)
   target.aliveHP -= dmg
   target.woundedHP += dmg * (1 - lethalityFrac(atk.lethal))
@@ -222,7 +285,8 @@ function applyMelee(attacker: Cohort, target: Cohort, overlapMen: number, dt: nu
 function applyRanged(bow: Cohort, target: Cohort, dt: number): void {
   const atk = TROOPS[bow.kind]
   const def = TROOPS[target.kind]
-  const dps = bow.aliveHP * (coef(atk.attack) / coef(def.defense)) * CONFIG.rangedScale
+  const volley = bow.ability?.type === 'volley' ? CONFIG.volleyMul : 1 // 일제사 화력 부스트
+  const dps = bow.aliveHP * (coef(atk.attack) / coef(def.defense)) * CONFIG.rangedScale * volley
   const dmg = Math.min(dps * dt, target.aliveHP)
   target.aliveHP -= dmg
   target.woundedHP += dmg * (1 - lethalityFrac(atk.lethal)) // 궁=저치명(부상 위주)
@@ -367,9 +431,9 @@ export function step(battle: Battle, dtMs: number): void {
   if (battle.phase === 'ended') return
   if (battle.phase === 'rout') { stepRout(battle, dt); return }
 
-  // 이동/회전 → 반대 진영 충돌 해소
+  // 어빌리티(스태미너·진행) → 이동/회전 → 반대 진영 충돌 해소
   for (const side of ['A', 'B'] as Side[]) {
-    for (const c of battle.units[side].cohorts) stepCohort(c, dt)
+    for (const c of battle.units[side].cohorts) { stepAbility(c, dt); stepCohort(c, dt) }
   }
   resolveCollisions(battle)
 
