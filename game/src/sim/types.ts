@@ -20,6 +20,8 @@ export interface Cohort {
   spread: number     // 대형 폭 계수: 1=펼침, 이동 중 0.35로 모임
   curSpeed: number   // 현재 속도(기병 가속용). px/s
   inMelee: boolean   // 이번 틱 근접 교전 중인가 (렌더 공격 애니용)
+  firing: boolean    // 이번 틱 궁병 사격 중인가 (렌더 사격 애니·화살용)
+  fireTarget: Vec | null // 사격 대상 위치 (화살 연출용)
   chargeRun: boolean // 기병 돌격 중(이동거리 임계 초과로 발동, 저지로 파훼)
   stamina: number    // 어빌리티 자원 0~100
   ability: Ability | null // 발동 중인 어빌리티

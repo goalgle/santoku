@@ -38,6 +38,8 @@ function buildCohort(spec: { kind: Cohort['kind']; men: number }, anchor: Vec, f
     spread: CONFIG.spreadDeployed,
     curSpeed: 0,
     inMelee: false,
+    firing: false,
+    fireTarget: null,
     chargeRun: false,
     stamina: CONFIG.staminaMax,
     ability: null,
@@ -318,7 +320,7 @@ function rangedPass(battle: Battle, dt: number): void {
         const d = anchorD - frontE
         if (d <= range && d < bestD) { bestD = d; best = e }
       }
-      if (!inMelee && best) applyRanged(c, best, dt)
+      if (!inMelee && best) { c.firing = true; c.fireTarget = { ...best.anchor }; applyRanged(c, best, dt) }
     }
   }
 }
@@ -439,7 +441,7 @@ export function step(battle: Battle, dtMs: number): void {
   const dt = dtMs / 1000
   battle.time += dtMs
   battle.tick += 1
-  for (const s of ['A', 'B'] as Side[]) for (const c of battle.units[s].cohorts) c.inMelee = false
+  for (const s of ['A', 'B'] as Side[]) for (const c of battle.units[s].cohorts) { c.inMelee = false; c.firing = false }
   if (battle.phase === 'ended') return
   if (battle.phase === 'rout') { stepRout(battle, dt); return }
 

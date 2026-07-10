@@ -5,6 +5,7 @@ import { Camera } from '../render/camera'
 import { setTilt, getTilt, projectY } from '../render/blobView'
 import { loadClips, loadNamed, SoldierView, CharacterSprite } from '../render/soldier'
 import type { SoldierClips, Clear } from '../render/soldier'
+import { Arrows } from '../render/arrows'
 import { CommandController, AbilityBar } from '../render/command'
 import { setCohortTarget, useAbility, nearestEnemy } from '../sim/battle'
 import { CONFIG } from '../data/config'
@@ -84,6 +85,7 @@ async function main() {
   // 개입 UI (플레이어 = A): 어빌리티 바(주) + 탭 이동(위치 미세조정)
   const cmd = new CommandController(tiltLayer, app.canvas, d.battle, () => d.paused, 'A')
   const abilityBar = new AbilityBar(d.battle, 'A')
+  const arrows = new Arrows(tiltLayer) // 궁병 화살 연출(병사 위)
   const moraleGfx = new Graphics()
   tiltLayer.addChild(moraleGfx)
 
@@ -158,6 +160,8 @@ async function main() {
   })
 
   let rtime = 0
+  let arrowAcc = 0
+  const ARROW_SPAWN = 0.06 // 사격 궁병당 초당 ~16발
   app.ticker.add((t) => {
     // 앵글 애니: 명령 모드=평면(0), 아니면 선호 앵글(baseTilt)로 부드럽게
     const tiltTarget = d.paused ? 0 : baseTilt
@@ -185,6 +189,23 @@ async function main() {
     }
 
     for (const { c, v, side } of views) v.update(c, t.deltaMS, clearsBySide[side])
+
+    // 궁병 사격 연출: 사격 중인 궁병 덩어리 전면에서 대상 쪽으로 화살 분출(퍼짐)
+    arrowAcc += t.deltaMS / 1000
+    while (arrowAcc >= ARROW_SPAWN) {
+      arrowAcc -= ARROW_SPAWN
+      for (const { c } of views) {
+        if (c.kind !== 'bow' || !c.firing || !c.fireTarget || c.aliveHP <= 0) continue
+        const cos = Math.cos(c.facing), sin = Math.sin(c.facing)
+        const front = (c.depth * CONFIG.spacing) / 2
+        const halfW = Math.min(100, ((c.aliveHP / c.depth) * CONFIG.spacing) / 2)
+        const w = (Math.random() - 0.5) * 2 * halfW
+        const fx = c.anchor.x + cos * front - sin * w
+        const fy = c.anchor.y + sin * front + cos * w
+        arrows.spawn(fx, fy, c.fireTarget.x + (Math.random() - 0.5) * 90, c.fireTarget.y + (Math.random() - 0.5) * 90)
+      }
+    }
+    arrows.update(t.deltaMS / 1000)
 
     for (const { u, c } of gens) {
       const g = u.general

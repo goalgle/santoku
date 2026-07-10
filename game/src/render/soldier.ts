@@ -109,7 +109,7 @@ export class SoldierView {
   }
 
   private clipFor(c: Cohort): Clip {
-    if (c.inMelee) return this.clips.attack
+    if (c.inMelee || c.firing) return this.clips.attack // 근접 or 궁병 사격 → 공격 모션
     if (c.target) return this.clips.walk
     return this.clips.idle
   }
