@@ -173,9 +173,17 @@ function stepAbility(c: Cohort, dt: number): void {
 
 // --- 틱 ---
 
-function stepCohort(c: Cohort, dt: number): void {
+function stepCohort(c: Cohort, unit: Unit, dt: number): void {
   const stats = TROOPS[c.kind]
-  const moveSpeed = CONFIG.moveBase * coef(stats.move)
+  let moveSpeed = CONFIG.moveBase * coef(stats.move)
+  // 아군 겹쳐 이동 시 -30% (기병 예외 — 기병은 겹침/돌파 무페널티, 저지로만 감속)
+  if (c.kind !== 'cavalry' && c.target) {
+    const rc = (c.depth * CONFIG.spacing) / 2
+    for (const o of unit.cohorts) {
+      if (o === c || o.aliveHP <= 0) continue
+      if (dist(c.anchor, o.anchor) < rc + (o.depth * CONFIG.spacing) / 2) { moveSpeed *= 1 - CONFIG.friendlyOverlapPenalty; break }
+    }
+  }
 
   if (c.target) {
     const dx = c.target.x - c.anchor.x
@@ -437,7 +445,8 @@ export function step(battle: Battle, dtMs: number): void {
 
   // 어빌리티(스태미너·진행) → 이동/회전 → 반대 진영 충돌 해소
   for (const side of ['A', 'B'] as Side[]) {
-    for (const c of battle.units[side].cohorts) { stepAbility(c, dt); stepCohort(c, dt) }
+    const u = battle.units[side]
+    for (const c of u.cohorts) { stepAbility(c, dt); stepCohort(c, u, dt) }
   }
   resolveCollisions(battle)
 
