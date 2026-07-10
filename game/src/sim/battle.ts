@@ -116,7 +116,7 @@ export function moveCohort(unit: Unit, index: number, target: Vec): boolean {
 
 const ABILITY_KIND: Record<AbilityType, TroopKind> = { defend: 'shield', advance: 'spear', charge: 'cavalry', volley: 'bow' }
 
-function nearestEnemy(battle: Battle, side: Side, from: Vec): Cohort | null {
+export function nearestEnemy(battle: Battle, side: Side, from: Vec): Cohort | null {
   const foe: Side = side === 'A' ? 'B' : 'A'
   let best: Cohort | null = null, bestD = Infinity
   for (const e of battle.units[foe].cohorts) {
@@ -389,9 +389,13 @@ function stepGenerals(battle: Battle, dt: number): void {
 
 function stepRout(battle: Battle, dt: number): void {
   battle.routTime += dt
-  const loser = battle.units[battle.loser as Side]
-  for (const c of loser.cohorts) {
-    c.aliveHP = Math.max(0, c.aliveHP - c.aliveHP * CONFIG.routKillRate * dt) // 도주 중 속수무책
+  const side = battle.loser as Side
+  const dir = side === 'A' ? -1 : 1 // A는 왼쪽(-x), B는 오른쪽(+x)으로 달아남
+  for (const c of battle.units[side].cohorts) {
+    c.aliveHP = Math.max(0, c.aliveHP - c.aliveHP * CONFIG.routKillRate * dt) // 속수무책 사상
+    c.anchor.x += dir * CONFIG.routFleeSpeed * dt // 도주 이동
+    c.facing = dir < 0 ? Math.PI : 0 // 달아나는 방향
+    c.target = null; c.ability = null; c.stance = 'idle'; c.chargeRun = false
   }
   if (battle.routTime >= CONFIG.routDuration) endBattle(battle)
 }

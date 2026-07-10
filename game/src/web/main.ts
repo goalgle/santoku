@@ -6,6 +6,7 @@ import { setTilt, getTilt, projectY } from '../render/blobView'
 import { loadClips, loadNamed, SoldierView, CharacterSprite } from '../render/soldier'
 import type { SoldierClips, Clear } from '../render/soldier'
 import { CommandController, AbilityBar } from '../render/command'
+import { setCohortTarget, useAbility, nearestEnemy } from '../sim/battle'
 import { CONFIG } from '../data/config'
 import type { TroopKind } from '../data/units'
 import type { Cohort, Side, Unit } from '../sim/types'
@@ -81,6 +82,26 @@ async function main() {
   // 개입 UI (플레이어 = A): 어빌리티 바(주) + 탭 이동(위치 미세조정)
   const cmd = new CommandController(tiltLayer, app.canvas, d.battle, () => d.paused, 'A')
   const abilityBar = new AbilityBar(d.battle, 'A')
+  const moraleGfx = new Graphics()
+  tiltLayer.addChild(moraleGfx)
+
+  // 간단 AI: 양측 유휴 병종은 가장 가까운 적으로 자동 진격, B는 가끔 어빌리티
+  let aiTimer = 0
+  const AB = ['defend', 'advance', 'volley', 'charge'] as const
+  const runAI = (dt: number) => {
+    const b = d.battle
+    if (b.phase !== 'deploy' && b.phase !== 'engage') return
+    for (const side of ['A', 'B'] as Side[]) {
+      const cs = b.units[side].cohorts
+      for (const c of cs) {
+        if (c.aliveHP <= 0 || c.ability || c.target || c.inMelee) continue
+        const foe = nearestEnemy(b, side, c.anchor)
+        if (foe) setCohortTarget(c, foe.anchor.x, foe.anchor.y)
+      }
+    }
+    aiTimer += dt
+    if (aiTimer > 3.5) { aiTimer = 0; const i = Math.floor(Math.random() * 4); useAbility(b, 'B', i, AB[i]) }
+  }
 
   // 액티브 포즈 토글(버튼 + space)
   const pauseBtn = document.getElementById('pausebtn')
@@ -110,6 +131,7 @@ async function main() {
     const tiltTarget = d.paused ? 0 : baseTilt
     setTilt(getTilt() + (tiltTarget - getTilt()) * Math.min(1, (t.deltaMS / 1000) * 6))
     drawTerrain() // 지형(고지 원근 투영)
+    if (!d.done && !d.paused) runAI(t.deltaMS / 1000)
     if (!d.done) d.step(t.deltaMS)
     rtime += t.deltaMS / 1000
 
@@ -146,6 +168,14 @@ async function main() {
     }
     for (const { u, c } of flags) {
       c.update(t.deltaMS, 'idle', u.flag.pos.x, u.flag.pos.y, u.side === 'A' ? 1 : -1)
+    }
+    // 사기 바 (유닛별, 군기 위)
+    moraleGfx.clear()
+    for (const side of ['A', 'B'] as Side[]) {
+      const u = d.battle.units[side]
+      const bx = u.flag.pos.x, by = projectY(u.flag.pos.y) - 80, w = 80, m = Math.max(0, u.morale) / 100
+      moraleGfx.rect(bx - w / 2, by, w, 8).fill(0x000000)
+      moraleGfx.rect(bx - w / 2, by, w * m, 8).fill(m > 0.5 ? 0x66cc66 : m > 0.2 ? 0xddcc44 : 0xcc4444)
     }
     cmd.draw()
     abilityBar.update()

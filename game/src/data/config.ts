@@ -53,6 +53,7 @@ export const CONFIG = {
   // 도주/종료·정도 (doc/04 4.8)
   routDuration: 10,        // 도주 페이즈 상한(초)
   routKillRate: 0.03,      // 도주 중 초당 사상 비율(속수무책)
+  routFleeSpeed: 150,      // 도주 이동 속도(자기 진영 쪽으로 달아남)
   degreeWin: 0.8,          // 잔존 ≥80% 대승리
   degreeMid: 0.5,          // 잔존 ≥50% 승리 (미만은 안타까운 승리)
 
