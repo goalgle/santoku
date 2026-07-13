@@ -31,9 +31,29 @@ npm run dev            # 화면: http://localhost:5173/?s=myScene
 npm run sim myScene    # 콘솔(헤드리스)
 ```
 
+## 편성 조립 DSL — `compose()` (빠른 테스트)
+스냅샷을 직접 안 쓰고 **진영별로 병종을 추가**해 전투를 만든다. 타임라인 없이 자유 개입 테스트에 적합.
+```ts
+// src/scenarios.ts
+import { compose } from './compose'
+
+lab: compose()
+  .name('조립 예시')
+  .terrain('plain')                              // plain | hills | defile
+  .addShield('left', 1000).addSpear('left', 600) // left = A(왼쪽)
+  .addArcher('left', 400).addCavalry('left', 200)
+  .addArcher('right', 800).addShield('right', 600) // right = B(오른쪽), 궁병 위주
+  .general('left', { might: 80 })                // 장수 능력치 일부만 덮어쓰기
+  .build(),                                       // 또는 .scene().at(...)... 로 타임라인 연결
+```
+- `add{Shield|Spear|Archer|Cavalry}(side, men?)` — men 생략 시 기본값(1000/600/400/200). **추가 순서 = 앞→뒤 대열.**
+- `addRoster(side)` — 표준 4병종 한 번에. `anchor/facing/seed`도 메서드로 조정.
+- **비표준 로스터 OK** — 어빌리티 바는 병종(kind)으로 찾으므로 창병 없는 편성 등도 정상(없는 버튼은 숨김).
+- 실행: `?s=lab` 또는 `npm run sim lab`.
+
 ## 좌표·인덱스 규칙
-- **좌우 대립**: `'A'`(파랑, **왼쪽**) / `'B'`(빨강, **오른쪽**)
-- **병종 인덱스**: `0`=방패 · `1`=창 · `2`=궁 · `3`=기병 (스냅샷 편성 순)
+- **좌우 대립**: `'A'`/`left`(파랑, **왼쪽**) / `'B'`/`right`(빨강, **오른쪽**)
+- **병종 인덱스**(스냅샷/op용): `0`=방패 · `1`=창 · `2`=궁 · `3`=기병 (표준 편성 순)
 - **좌표**: 월드 px, 원점=중앙, **+x 오른쪽 · +y 아래**
 - **facing**: 라디안, 전면이 향하는 방향. `RIGHT=0`(오른쪽) · `LEFT=π`(왼쪽).
   A는 오른쪽(RIGHT)으로, B는 왼쪽(LEFT)으로 마주본다. (방향은 스냅샷·시나리오 좌표만 바꾸면 됨 — sim 코드 무관.)

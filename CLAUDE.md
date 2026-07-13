@@ -51,7 +51,8 @@
 - [x] **시나리오/Director 구조** — `game/` (scenario.ts·director.ts·scenarios.ts). 컷신·테스트를 **타임라인(언제·무엇)** 으로 스크립트(병종·장수·지형 제어 op). `new Director(scn)`→`step(dt)`→`battle`. 액티브 포즈=paused. **렌더가 그대로 재사용할 재생 구조.** `npm run sim [advance|charge|duel|hill|defile]`.
 - [~] **렌더(PixiJS) 붙이기 (1차)** — `game/src/render`(blobView·camera)·`game/src/web/main.ts`. **sim(Director) 상태를 스프라이트로 그림** — cohort anchor/facing/폭/사상 → 덩어리, 장수/군기 마커, 지형, 핀치줌, space=액티브 포즈. `npm run dev`(폰=LAN, `?s=시나리오키`). **배포 spike-0→game 전환**, 라이브 https://goalgle.github.io/santoku/ 에서 전투 재생.
   - **일기토 결투장 연출**(렌더 전용): 양측 장수 근접 시 병사들이 물러나 원을 만들어 둘러쌈, 접전 지속(meleeTime)에 원 성장, 장수는 서로 돎. (`?s=duel`)
-  - **컷신/시나리오 작성 가이드 → `game/CUTSCENES.md`** (scene 빌더·op·좌표/인덱스 규칙).
+  - **컷신/시나리오 작성 가이드 → `game/CUTSCENES.md`** (scene 빌더·op·좌표/인덱스 규칙 + **조립 DSL `compose()`**).
+  - **전술 조립 DSL**(`src/compose.ts`): `compose().addArcher('right',200)...build()` 로 진영별 병종 추가해 전투 구성. `?s=lab` 예시. 어빌리티 바=병종(kind) 기반이라 비표준 로스터 지원.
   - **병종 스프라이트**(방패/창/궁/기 + 장수/깃발병, `public/sprites/`): idle/walk/attack/dead 애니 상태머신(inMelee→공격), 옅은 팀 틴트. 특이 클립(기병 charge·깃발 wave·장수 command/shout) 미연결.
   - **가짜 3D(2.5D) 원근** — 카메라 앵글 `TILT`(버튼·키 0/9). **크기(앞 크게)와 위치(눌러 겹침·먼쪽 수렴) 분리** — 상세·공식 `doc/05 5.6.7`.
   - **개입 UI v1**(`render/command.ts`): 액티브 포즈(⏸/space)→A 병종 탭→명령바(이동/돌격/방어)→지점 탭. 명령반경 gating. `?s=free` 테스트.

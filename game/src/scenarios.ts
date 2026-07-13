@@ -1,5 +1,6 @@
 import { V0_SNAPSHOT } from './snapshot'
 import { scene, place, forceTo, setMight, placeGeneral, placeFlag, setTerrain, say, sortie } from './scenario'
+import { compose } from './compose'
 import { TERRAINS } from './data/terrain'
 import type { Scenario } from './scenario'
 import type { Terrain } from './sim/types'
@@ -48,5 +49,15 @@ export const SCENARIOS: Record<string, Scenario> = {
   defile: scene('애로 병목', V0_SNAPSHOT)
     .at(0, setTerrain(TERRAINS.defile), place('A', 0, -60, 0, RIGHT), place('B', 0, 60, 0, LEFT))
     .duration(6)
+    .build(),
+
+  // 조립 DSL 예시(?s=lab): 여기 add* 만 바꿔가며 전술을 빠르게 테스트.
+  // left = 표준 로스터, right = 궁병 위주(장궁대) — 병력·장수·지형 자유 수정.
+  lab: compose()
+    .name('조립 예시 (lab)')
+    .terrain('plain')
+    .addShield('left', 1000).addSpear('left', 600).addArcher('left', 400).addCavalry('left', 200)
+    .addShield('right', 600).addArcher('right', 800).addArcher('right', 400).addCavalry('right', 200)
+    .general('left', { might: 80 }).general('right', { might: 70 })
     .build(),
 }
