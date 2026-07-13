@@ -7,7 +7,7 @@ import { loadClips, loadNamed, SoldierView, CharacterSprite } from '../render/so
 import type { SoldierClips, Clear } from '../render/soldier'
 import { Arrows } from '../render/arrows'
 import { CommandController, AbilityBar } from '../render/command'
-import { setCohortTarget, useAbility, nearestEnemy } from '../sim/battle'
+import { setCohortTarget, useAbility, nearestEnemy, toggleGeneral } from '../sim/battle'
 import { CONFIG } from '../data/config'
 import { coef } from '../data/grades'
 import { TROOPS } from '../data/units'
@@ -85,6 +85,10 @@ async function main() {
   // 개입 UI (플레이어 = A): 어빌리티 바(주) + 탭 이동(위치 미세조정)
   const cmd = new CommandController(tiltLayer, app.canvas, d.battle, () => d.paused, 'A')
   const abilityBar = new AbilityBar(d.battle, 'A')
+  // 장수 출전/복귀 토글 버튼(A측)
+  const genBtn = document.getElementById('generalbtn') as HTMLButtonElement | null
+  genBtn?.addEventListener('click', () => toggleGeneral(d.battle, 'A'))
+
   const arrows = new Arrows(tiltLayer) // 궁병 화살 연출(병사 위)
   const moraleGfx = new Graphics()
   tiltLayer.addChild(moraleGfx)
@@ -216,8 +220,16 @@ async function main() {
         gx = duelClear.cx + Math.cos(a) * 14
         gy = duelClear.cy + Math.sin(a) * 14
       }
-      const clip = duelClear && g.state === 'out' ? 'attack' : g.state === 'rest' ? 'walk' : 'idle'
+      const clip = duelClear && g.state === 'out' ? 'attack' : g.state === 'out' ? 'walk' : 'idle'
       c.update(t.deltaMS, clip, gx, gy, u.side === 'A' ? 1 : -1)
+    }
+    // 장수 버튼: 출전(out)이면 '복귀'로 토글 표시, 부상·사망/종료면 비활성
+    if (genBtn) {
+      const g = d.battle.units.A.general
+      const out = g.state === 'out'
+      genBtn.textContent = out ? '↩ 장수복귀' : '🗡 장수출전'
+      genBtn.classList.toggle('out', out)
+      genBtn.disabled = g.state === 'lost' || g.state === 'standby' || d.battle.phase === 'ended'
     }
     for (const { u, c } of flags) {
       c.update(t.deltaMS, 'idle', u.flag.pos.x, u.flag.pos.y, u.side === 'A' ? 1 : -1)

@@ -60,7 +60,7 @@ function buildUnit(side: Side, spec: UnitSpec): Unit {
     intel: spec.general.intel,
     hp: spec.general.hp,
     maxHp: spec.general.hp,
-    state: 'out',
+    state: 'rest', // 시작: 깃발 뒤 대기(출전 명령 전까지)
     pos: { ...spec.anchor },
     meleeTime: 0,
     boostGiven: false,
@@ -72,6 +72,8 @@ function buildUnit(side: Side, spec: UnitSpec): Unit {
     maxHp: CONFIG.flagHp,
     broken: false,
   }
+  const back = side === 'A' ? -1 : 1 // 적 반대쪽(깃발 바로 뒤)
+  general.pos = { x: flag.pos.x + back * CONFIG.generalHomeOffset, y: flag.pos.y }
   // 대형 배치: 앞 병종(로스터 순)을 전면에, 나머지는 바로 뒤로 촘촘히 스택(같은 진영 겹침 허용)
   const facingDir = { x: Math.cos(spec.facing), y: Math.sin(spec.facing) }
   const stepBack = CONFIG.formationDepthGap
@@ -361,20 +363,39 @@ function duel(attacker: Unit['general'], target: Unit['general'], dt: number): v
   target.hp -= CONFIG.duelBase * (attacker.might / 100) * dt // 무력 기반
 }
 
-function handleGeneral(unit: Unit, dt: number): void {
+/** 깃발 바로 뒤(적 반대쪽) 대기 위치 */
+function homePos(unit: Unit): Vec {
+  const back = unit.side === 'A' ? -1 : 1
+  return { x: unit.flag.pos.x + back * CONFIG.generalHomeOffset, y: unit.flag.pos.y }
+}
+
+/** 장수 출전/복귀 토글 (유저 명령). rest↔out, 부상·사망/대기 상태는 무시 */
+export function toggleGeneral(battle: Battle, side: Side): void {
+  const g = battle.units[side].general
+  if (g.state === 'rest') { g.state = 'out'; g.meleeTime = 0 }      // 출전
+  else if (g.state === 'out') g.state = 'rest'                       // 복귀
+}
+
+function handleGeneral(unit: Unit, enemy: Unit, dt: number): void {
   const g = unit.general
-  if (g.state === 'out' && g.hp <= 0) {
-    g.hp = 0; g.state = 'rest'; g.meleeTime = 0 // HP 0 → 부대군기로 휴식
-  } else if (g.state === 'rest') {
-    const f = unit.flag.pos
-    const dx = f.x - g.pos.x, dy = f.y - g.pos.y, d = Math.hypot(dx, dy)
-    if (d > 2) {
+  if (g.state === 'out') {
+    if (g.hp <= 0) { g.hp = 0; g.state = 'rest'; g.meleeTime = 0; return } // HP 0 → 강제 복귀
+    // 출전: 적 장수 쪽으로 전진(일기토 추구)
+    const t = enemy.general.pos
+    const dx = t.x - g.pos.x, dy = t.y - g.pos.y, d = Math.hypot(dx, dy)
+    if (d > CONFIG.generalRange * 0.8) {
       const s = Math.min(d, CONFIG.generalMoveSpeed * dt)
       g.pos.x += (dx / d) * s; g.pos.y += (dy / d) * s
-    } else {
-      g.hp = Math.min(g.maxHp, g.hp + CONFIG.generalRegen * dt) // 리젠
-      if (g.hp >= g.maxHp) g.state = 'out' // 재출진
     }
+  } else if (g.state === 'rest') {
+    // 복귀: 깃발 뒤 홈으로 이동 (자동 재출진 없음 — 출전은 명령으로만)
+    const h = homePos(unit)
+    const dx = h.x - g.pos.x, dy = h.y - g.pos.y, d = Math.hypot(dx, dy)
+    if (d > 4) {
+      const s = Math.min(d, CONFIG.generalMoveSpeed * dt)
+      g.pos.x += (dx / d) * s; g.pos.y += (dy / d) * s
+    }
+    if (dist(g.pos, unit.flag.pos) < CONFIG.generalRegenRange) g.hp = Math.min(g.maxHp, g.hp + CONFIG.generalRegen * dt) // 깃발 근처 회복
   }
 }
 
@@ -393,8 +414,8 @@ function stepGenerals(battle: Battle, dt: number): void {
       }
     }
   }
-  handleGeneral(A, dt)
-  handleGeneral(B, dt)
+  handleGeneral(A, B, dt)
+  handleGeneral(B, A, dt)
 }
 
 function stepRout(battle: Battle, dt: number): void {

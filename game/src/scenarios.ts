@@ -1,5 +1,5 @@
 import { V0_SNAPSHOT } from './snapshot'
-import { scene, place, forceTo, setMight, placeGeneral, placeFlag, setTerrain, say } from './scenario'
+import { scene, place, forceTo, setMight, placeGeneral, placeFlag, setTerrain, say, sortie } from './scenario'
 import { TERRAINS } from './data/terrain'
 import type { Scenario } from './scenario'
 import type { Terrain } from './sim/types'
@@ -33,8 +33,8 @@ export const SCENARIOS: Record<string, Scenario> = {
       placeGeneral('A', -250, 0), placeGeneral('B', 250, 0),
       forceTo('A', 0, -95, 0), forceTo('B', 0, 95, 0),   // 방패 관객(앞줄)
       forceTo('A', 1, -140, 0), forceTo('B', 1, 140, 0)) // 창 관객(뒷줄)
-    .at(1.2, placeGeneral('A', -22, 0), say('A 장수 전진'))
-    .at(3, placeGeneral('B', 22, 0), say('B 장수 응전 — 일기토!'))
+    .at(1.2, sortie('A'), say('A 장수 전진'))
+    .at(3, sortie('B'), say('B 장수 응전 — 일기토!'))
     .duration(40)
     .build(),
 

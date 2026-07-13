@@ -25,6 +25,8 @@ export const forceTo = (side: Side, idx: number, x: number, y: number): Op =>
 
 export const setMight = (side: Side, v: number): Op => (b) => { b.units[side].general.might = v }
 export const placeGeneral = (side: Side, x: number, y: number): Op => (b) => { b.units[side].general.pos = { x, y } }
+/** 장수 출전(컷신용 — 대기 상태를 강제 출전으로) */
+export const sortie = (side: Side): Op => (b) => { b.units[side].general.state = 'out' }
 export const placeFlag = (side: Side, x: number, y: number): Op => (b) => { b.units[side].flag.pos = { x, y } }
 export const setTerrain = (t: Terrain): Op => (b) => { b.terrain = t }
 export const say = (msg: string): Op => () => console.log(`   · ${msg}`)

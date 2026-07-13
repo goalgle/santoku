@@ -38,6 +38,8 @@ export const CONFIG = {
   generalMoraleBoost: 5,
   generalStandbyHp: 0.5,   // 종료 시 HP비 ≥ → 대기(재출전) / 미만 → 부상·사망
   generalSpace: 34,        // 아군 병사가 장수 주변에 두는 거리(렌더 — 존재감)
+  generalHomeOffset: 46,   // 깃발 바로 뒤 대기 위치(적 반대쪽)
+  generalRegenRange: 100,  // 깃발 이 거리 안 → HP 회복
 
   // 전술 어빌리티 + 스태미너 (전술 어빌리티 모델)
   staminaMax: 100,
