@@ -187,7 +187,7 @@ function stepAbility(c: Cohort, dt: number): void {
 
 function stepCohort(c: Cohort, unit: Unit, dt: number): void {
   const stats = TROOPS[c.kind]
-  let moveSpeed = CONFIG.moveBase * coef(stats.move) * (1 - c.slow) // 저지 감속(이동속도 상한 저하)
+  let moveSpeed = CONFIG.moveBase * coef(stats.move) * CONFIG.moveMult[c.kind] * (1 - c.slow) // 병종 배율 + 저지 감속
   // 아군 겹쳐 이동 시 -30% (기병 예외 — 기병은 겹침/돌파 무페널티, 저지로만 감속)
   if (c.kind !== 'cavalry' && c.target) {
     const rc = (c.depth * CONFIG.spacing) / 2
@@ -272,7 +272,7 @@ function frontageOverlapMen(a: Cohort, b: Cohort, terrain: Terrain): number {
 }
 
 /** 병종 최대 이동속도 */
-export const maxSpeed = (kind: Cohort['kind']): number => CONFIG.moveBase * coef(TROOPS[kind].move)
+export const maxSpeed = (kind: Cohort['kind']): number => CONFIG.moveBase * coef(TROOPS[kind].move) * CONFIG.moveMult[kind]
 
 /** 기병 돌격(돌파) 중 = chargeRun 이동 명령 실행 중. 저지는 감속만 시키므로 파훼 안 됨(도착까지 유지) (doc/04 4.5.3) */
 export const isCharging = (c: Cohort): boolean =>

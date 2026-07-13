@@ -71,6 +71,8 @@ export const CONFIG = {
 
   // 이동/회전 (doc/04 4.5.3): 등급 배율(0.5~1.0)에 곱하는 기준값
   moveBase: 140,           // px/s @ 배율 1.0
+  // 병종별 이동 배율(등급으로 표현 못 하는 보정). 궁병 느리게·기병 빠르게 → 기병이 궁병 추격 가능
+  moveMult: { shield: 1, spear: 1, bow: 0.5, cavalry: 2 } as Record<string, number>,
   turnBase: 3.2,           // rad/s @ 배율 1.0
   moveAlignTol: 0.30,      // 이 각도 이내로 정렬돼야 전진(밖이면 제자리 회전)
   arriveDist: 2,
