@@ -139,16 +139,23 @@ export function useAbility(battle: Battle, side: Side, index: number, type: Abil
   const def = CONFIG.ability[type]
   if (c.kind !== ABILITY_KIND[type] || c.aliveHP <= 0 || c.ability || c.stamina < def.cost || !canCommand(unit, c)) return false
   c.stamina -= def.cost
-  c.ability = { type, timer: def.dur, phase: 'out', origin: { ...c.anchor } }
+  c.ability = { type, timer: def.dur, phase: 'out', origin: { ...c.anchor }, path: [] }
   const foe = nearestEnemy(battle, side, c.anchor)
   if (type === 'defend') c.stance = 'defend'
   else if (type === 'volley') c.target = null // 정지 사격
   else if (foe) {
     if (type === 'advance') setCohortTarget(c, foe.anchor.x, foe.anchor.y)
-    else if (type === 'charge') { // 적을 뚫고 지나가는 지점까지
+    else if (type === 'charge') {
+      // 돌진 루프: 적진(궁병 포함)을 뚫고 반대편까지 → 왼쪽으로 선회 → 출발점 귀환.
       const dx = foe.anchor.x - c.anchor.x, dy = foe.anchor.y - c.anchor.y
       const l = Math.hypot(dx, dy) || 1
-      setCohortTarget(c, foe.anchor.x + (dx / l) * 120, foe.anchor.y + (dy / l) * 120)
+      const ux = dx / l, uy = dy / l
+      const lx = uy, ly = -ux // 진행방향 기준 왼쪽(선회 방향)
+      const T = CONFIG.chargeThrough, W = CONFIG.chargeLoopWidth
+      const deep = { x: foe.anchor.x + ux * T, y: foe.anchor.y + uy * T }          // 적 후방(궁병) 관통
+      const wheel = { x: foe.anchor.x + lx * W, y: foe.anchor.y + ly * W }         // 왼쪽으로 선회
+      c.ability.path = [wheel, { ...c.ability.origin }]                             // deep 도착 후 소비
+      setCohortTarget(c, deep.x, deep.y)
       c.chargeRun = true
     }
   }
@@ -168,14 +175,10 @@ function stepAbility(c: Cohort, dt: number): void {
   const a = c.ability
   if (!a) return
   a.timer -= dt
-  if (a.type === 'charge') { // 도착 기반: 적진 돌파 완료 → 귀환, 귀환 완료 → 종료
-    if (a.phase === 'out' && c.target === null) {
-      a.phase = 'back'
-      setCohortTarget(c, a.origin.x, a.origin.y) // 출발점(예비대 위치)으로 선회 귀환
-      c.chargeRun = true
-    } else if (a.phase === 'back' && c.target === null) {
-      endAbility(c); return
-    }
+  if (a.type === 'charge' && c.target === null) { // 웨이포인트 도착 → 다음 지점(관통→선회→귀환), 없으면 종료
+    const next = a.path.shift()
+    if (next) { a.phase = 'back'; setCohortTarget(c, next.x, next.y); c.chargeRun = true }
+    else { endAbility(c); return }
   }
   if (a.timer <= 0) endAbility(c) // 안전 상한(멀리서 막혔을 때)
 }

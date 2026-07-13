@@ -26,8 +26,8 @@ export const CONFIG = {
 
   // 사기 (doc/03 3.6.1): 0~100 시작 50, 접전 하락, 0 → 도주
   moraleStart: 50,
-  moraleBaseDrop: 2.5,     // 접전(피격) 중 초당 사기 하락
-  moralePerCasualty: 0.08, // 사상 1명당 사기 하락
+  moraleBaseDrop: 0.83,    // 접전(피격) 중 초당 사기 하락 (1/3로 완화 — 전투를 끝까지 관찰)
+  moralePerCasualty: 0.027,// 사상 1명당 사기 하락 (1/3로 완화)
 
   // 장수 (doc/07 7.1)
   duelBase: 9,             // 일기토 피해 배율(무력 기반)
@@ -47,7 +47,7 @@ export const CONFIG = {
   ability: {
     defend:  { cost: 30, dur: 2 },  // 방패: 2초 방어전념
     advance: { cost: 35, dur: 2 },  // 창: 2초 전진 공격
-    charge:  { cost: 55, dur: 8 },  // 기병: 돌진→돌파→귀환 (도착 기반, dur=안전 상한)
+    charge:  { cost: 55, dur: 20 }, // 기병: 돌진→관통→선회→귀환 루프 (도착 기반, dur=안전 상한)
     volley:  { cost: 30, dur: 2 },  // 궁: 2초 일제사
   },
   advanceAtkBoost: 1.3,    // 전진 공격 공속 부스트
@@ -86,6 +86,8 @@ export const CONFIG = {
   cavTurnRadiusMult: 20,   // 선회 반경 = 장수유닛 * 20
   chargeDistance: 150,     // 이동 거리 이 이상 → 자동 charge (돌격)
   chargeDefMult: 1.2,      // charge 중 방어 보정
+  chargeThrough: 220,      // 돌진: 적(전면) 기준 관통 깊이 — 궁병 뒤까지 뚫음
+  chargeLoopWidth: 180,    // 돌진: 반대편에서 왼쪽으로 선회하는 폭(루프 귀환)
 
   // 저지 = 이동속도 일시 저하(상한 감속). 블록 아님 — 기병은 계속 돌파하되 느려짐.
   stopSlowScale: 0.65,     // 저지력 coef × 이 값 = 이동 저하율(창 A→0.585, 방패 B→0.52)

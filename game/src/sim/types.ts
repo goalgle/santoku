@@ -29,7 +29,7 @@ export interface Cohort {
 }
 
 export type AbilityType = 'defend' | 'advance' | 'charge' | 'volley'
-export interface Ability { type: AbilityType; timer: number; phase: 'out' | 'back'; origin: Vec }
+export interface Ability { type: AbilityType; timer: number; phase: 'out' | 'back'; origin: Vec; path: Vec[] }
 
 export type GeneralState = 'out' | 'rest' | 'standby' | 'lost' // 출진/휴식/대기/부상·사망
 export interface General {
