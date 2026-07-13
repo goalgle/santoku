@@ -106,6 +106,7 @@ async function main() {
 
       for (const c of cs) {
         if (c.aliveHP <= 0 || c.ability) continue
+        if (c.kind === 'cavalry') continue // 기병 = 예비대(후방 대기). 돌진 어빌리티로만 출격
         const foe = nearestEnemy(b, side, c.anchor)
         if (!foe) continue
         const dd = Math.hypot(foe.anchor.x - c.anchor.x, foe.anchor.y - c.anchor.y)

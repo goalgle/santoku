@@ -167,12 +167,16 @@ function stepAbility(c: Cohort, dt: number): void {
   const a = c.ability
   if (!a) return
   a.timer -= dt
-  if (a.type === 'charge' && a.phase === 'out' && a.timer <= CONFIG.ability.charge.dur / 2) {
-    a.phase = 'back' // 절반 지나면 출발점으로 귀환(선회)
-    setCohortTarget(c, a.origin.x, a.origin.y)
-    c.chargeRun = true
+  if (a.type === 'charge') { // 도착 기반: 적진 돌파 완료 → 귀환, 귀환 완료 → 종료
+    if (a.phase === 'out' && c.target === null) {
+      a.phase = 'back'
+      setCohortTarget(c, a.origin.x, a.origin.y) // 출발점(예비대 위치)으로 선회 귀환
+      c.chargeRun = true
+    } else if (a.phase === 'back' && c.target === null) {
+      endAbility(c); return
+    }
   }
-  if (a.timer <= 0) endAbility(c)
+  if (a.timer <= 0) endAbility(c) // 안전 상한(멀리서 막혔을 때)
 }
 
 // --- 틱 ---

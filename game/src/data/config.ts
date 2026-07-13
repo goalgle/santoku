@@ -16,7 +16,7 @@ export const CONFIG = {
   damageScale: 6,          // 근접 피해 배율(잠정 — 튜닝 대상)
 
   // 궁병 사격 (doc/03 3.6.2, doc/07): 전열 병목 없이 사거리 내 전원 사격(정지 시만)
-  rangeBase: 440,          // 사거리 배율 1.0 기준 px (2배 상향 — 궁병 원거리 우위)
+  rangeBase: 880,          // 사거리 배율 1.0 기준 px (넓은 시야 — 궁병 장거리)
   rangedScale: 0.05,       // 원거리 피해 배율(잠정)
 
   // 지형 — 고지→저지 보정 (doc/04 4.8, doc/07 7.3)
@@ -47,7 +47,7 @@ export const CONFIG = {
   ability: {
     defend:  { cost: 30, dur: 2 },  // 방패: 2초 방어전념
     advance: { cost: 35, dur: 2 },  // 창: 2초 전진 공격
-    charge:  { cost: 55, dur: 3 },  // 기병: 돌진→돌파→귀환
+    charge:  { cost: 55, dur: 8 },  // 기병: 돌진→돌파→귀환 (도착 기반, dur=안전 상한)
     volley:  { cost: 30, dur: 2 },  // 궁: 2초 일제사
   },
   advanceAtkBoost: 1.3,    // 전진 공격 공속 부스트
