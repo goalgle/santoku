@@ -37,6 +37,7 @@ function buildCohort(spec: { kind: Cohort['kind']; men: number }, anchor: Vec, f
     target: null,
     spread: CONFIG.spreadDeployed,
     curSpeed: 0,
+    slow: 0,
     inMelee: false,
     firing: false,
     fireTarget: null,
@@ -183,7 +184,7 @@ function stepAbility(c: Cohort, dt: number): void {
 
 function stepCohort(c: Cohort, unit: Unit, dt: number): void {
   const stats = TROOPS[c.kind]
-  let moveSpeed = CONFIG.moveBase * coef(stats.move)
+  let moveSpeed = CONFIG.moveBase * coef(stats.move) * (1 - c.slow) // 저지 감속(이동속도 상한 저하)
   // 아군 겹쳐 이동 시 -30% (기병 예외 — 기병은 겹침/돌파 무페널티, 저지로만 감속)
   if (c.kind !== 'cavalry' && c.target) {
     const rc = (c.depth * CONFIG.spacing) / 2
@@ -270,7 +271,7 @@ function frontageOverlapMen(a: Cohort, b: Cohort, terrain: Terrain): number {
 /** 병종 최대 이동속도 */
 export const maxSpeed = (kind: Cohort['kind']): number => CONFIG.moveBase * coef(TROOPS[kind].move)
 
-/** 기병 돌격 중 = 긴 이동 명령(chargeRun) 실행 중. 저지로 파훼되면 false (doc/04 4.5.3) */
+/** 기병 돌격(돌파) 중 = chargeRun 이동 명령 실행 중. 저지는 감속만 시키므로 파훼 안 됨(도착까지 유지) (doc/04 4.5.3) */
 export const isCharging = (c: Cohort): boolean =>
   c.kind === 'cavalry' && c.chargeRun && c.target !== null
 
@@ -279,7 +280,9 @@ function applyMelee(attacker: Cohort, target: Cohort, overlapMen: number, dt: nu
   const atk = TROOPS[attacker.kind]
   const def = TROOPS[target.kind]
   const attackUnits = overlapMen / CONFIG.attackUnit
-  const atkCoef = isCharging(attacker) ? coef('S') : coef(atk.attack)     // charge: 공격 A→S
+  // charge 임팩트 = 속도 비례(A→S). 저지로 감속되면 임팩트도 줄어든다(정지시킴이 아니라 약화).
+  const chargeFrac = isCharging(attacker) ? Math.max(0, Math.min(1, attacker.curSpeed / maxSpeed('cavalry'))) : 0
+  const atkCoef = coef(atk.attack) + (coef('S') - coef(atk.attack)) * chargeFrac
   const defCoef = coef(def.defense) * (isCharging(target) ? CONFIG.chargeDefMult : 1) // charge: 방어 보정
   // 고지 → 저지 하향 공격 +20% (doc/04 4.8)
   const hill = elevationAt(terrain, attacker.anchor) > elevationAt(terrain, target.anchor) ? CONFIG.hillAttackBonus : 1
@@ -291,9 +294,9 @@ function applyMelee(attacker: Cohort, target: Cohort, overlapMen: number, dt: nu
   const dmg = Math.min(dps * dt, target.aliveHP)
   target.aliveHP -= dmg
   target.woundedHP += dmg * (1 - lethalityFrac(atk.lethal))
-  // 저지: 공격자가 상대 속도를 늦춤 → 기병이 충분히 감속되면 charge 파훼(창 저지 A 카운터).
-  target.curSpeed = Math.max(0, target.curSpeed - coef(atk.stop) * CONFIG.stopScale * dt)
-  if (target.kind === 'cavalry' && target.curSpeed < CONFIG.chargeBreakSpeed * maxSpeed('cavalry')) target.chargeRun = false
+  // 저지: 공격자의 저지력 → 상대 이동속도 상한을 일시 저하(감속). 블록 아님, 기병은 계속 돌파하되 느려짐.
+  // 창 저지 A가 가장 강하게 감속 → 임팩트↓ + 접전 노출↑로 카운터(정지시키지 않음).
+  target.slow = Math.max(target.slow, Math.min(0.9, coef(atk.stop) * CONFIG.stopSlowScale))
 }
 
 // --- 궁병 사격 (doc/03 3.6.2): 정지 시만, 전열 병목 없이 사거리 내 전원 사격 ---
@@ -466,7 +469,10 @@ export function step(battle: Battle, dtMs: number): void {
   const dt = dtMs / 1000
   battle.time += dtMs
   battle.tick += 1
-  for (const s of ['A', 'B'] as Side[]) for (const c of battle.units[s].cohorts) { c.inMelee = false; c.firing = false }
+  for (const s of ['A', 'B'] as Side[]) for (const c of battle.units[s].cohorts) {
+    c.inMelee = false; c.firing = false
+    c.slow = Math.max(0, c.slow - CONFIG.stopSlowDecay * dt) // 저지 저하 감쇠(이탈 시 회복). 접전 중이면 melee가 다시 갱신
+  }
   if (battle.phase === 'ended') return
   if (battle.phase === 'rout') { stepRout(battle, dt); return }
 

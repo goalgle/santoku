@@ -19,6 +19,7 @@ export interface Cohort {
   target: Vec | null
   spread: number     // 대형 폭 계수: 1=펼침, 이동 중 0.35로 모임
   curSpeed: number   // 현재 속도(기병 가속용). px/s
+  slow: number       // 저지에 의한 이동 저하율 0~1(이동속도 상한 = 최대×(1-slow)). 접전 중 갱신·이탈 시 감쇠
   inMelee: boolean   // 이번 틱 근접 교전 중인가 (렌더 공격 애니용)
   firing: boolean    // 이번 틱 궁병 사격 중인가 (렌더 사격 애니·화살용)
   fireTarget: Vec | null // 사격 대상 위치 (화살 연출용)

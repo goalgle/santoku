@@ -85,7 +85,9 @@ export const CONFIG = {
   cavArriveDist: 6,
   cavTurnRadiusMult: 20,   // 선회 반경 = 장수유닛 * 20
   chargeDistance: 150,     // 이동 거리 이 이상 → 자동 charge (돌격)
-  chargeBreakSpeed: 0.4,   // charge 중 curSpeed가 최대*이 값 밑이면 charge 파훼(창 저지 카운터)
   chargeDefMult: 1.2,      // charge 중 방어 보정
-  stopScale: 120,          // 저지: 상대 curSpeed 감소율(창 저지 A로 기병 감속→charge 파훼)
+
+  // 저지 = 이동속도 일시 저하(상한 감속). 블록 아님 — 기병은 계속 돌파하되 느려짐.
+  stopSlowScale: 0.65,     // 저지력 coef × 이 값 = 이동 저하율(창 A→0.585, 방패 B→0.52)
+  stopSlowDecay: 3,        // 접전 이탈 후 저하 감쇠율(/s) — '일시' 저하
 } as const
