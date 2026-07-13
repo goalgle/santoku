@@ -1,0 +1,14 @@
+[     179ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5173/favicon.ico:0
+[    3945ms] TypeError: Cannot read properties of undefined (reading 'kind')
+    at useAbility (http://localhost:5173/src/sim/battle.ts?t=1783930581151:115:9)
+    at runAI (http://localhost:5173/src/web/main.ts?t=1783930581151:121:7)
+    at TickerListener._fn (http://localhost:5173/src/web/main.ts?t=1783930581151:154:31)
+    at TickerListener.emit (http://localhost:5173/node_modules/.vite/deps/chunk-MYYWS66E.js?v=186d9573:2450:14)
+    at _Ticker2.update (http://localhost:5173/node_modules/.vite/deps/chunk-MYYWS66E.js?v=186d9573:2831:29)
+    at _tick (http://localhost:5173/node_modules/.vite/deps/chunk-MYYWS66E.js?v=186d9573:2516:14)
+[   78094ms] ReferenceError: AB is not defined
+    at runAI (http://localhost:5173/src/web/main.ts?t=1783932141504:121:29)
+    at TickerListener._fn (http://localhost:5173/src/web/main.ts?t=1783932141504:154:31)
+    at TickerListener.emit (http://localhost:5173/node_modules/.vite/deps/chunk-MYYWS66E.js?v=186d9573:2450:14)
+    at _Ticker2.update (http://localhost:5173/node_modules/.vite/deps/chunk-MYYWS66E.js?v=186d9573:2831:29)
+    at _tick (http://localhost:5173/node_modules/.vite/deps/chunk-MYYWS66E.js?v=186d9573:2516:14)

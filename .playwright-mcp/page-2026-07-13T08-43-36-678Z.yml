@@ -1,0 +1,22 @@
+- generic [active] [ref=f4e1]:
+  - generic: 산토쿠 · "조립 예시 (lab) — 기병 돌파" [lab] FPS 120 sprites 221 앵글 0.8 t=41.9s ended ▶ B 대승리 사기 A 0 / B 1 · space=일시정지 9/0=앵글 드래그·핀치=카메라
+  - button "⏸ 명령" [ref=f4e2]
+  - button "🗡 장수출전" [disabled] [ref=f4e3]
+  - generic [ref=f4e4]:
+    - button "🛡 방어" [disabled] [ref=f4e5]:
+      - text: 🛡
+      - text: 방어
+    - button "🏹 일제사" [disabled] [ref=f4e7]:
+      - text: 🏹
+      - text: 일제사
+    - button "🐎 돌진" [disabled] [ref=f4e8]:
+      - text: 🐎
+      - text: 돌진
+  - generic [ref=f4e9]:
+    - generic [ref=f4e10]: 줌
+    - button "−" [ref=f4e11]
+    - button "＋" [ref=f4e12]
+  - generic [ref=f4e13]:
+    - generic [ref=f4e14]: 앵글
+    - button "−" [ref=f4e15]
+    - button "＋" [ref=f4e16]

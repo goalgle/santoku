@@ -96,7 +96,7 @@ async function main() {
   // 간단 AI: 병종 이동(궁병 카이팅) + 부대군기 이동(아군에 붙되 적 반대쪽 뒤로) + B 어빌리티
   const BOW_RANGE = CONFIG.rangeBase * coef(TROOPS.bow.range)
   let aiTimer = 0
-  const AB = ['defend', 'advance', 'volley', 'charge'] as const
+  const ABILITY_FOR_KIND = { shield: 'defend', spear: 'advance', bow: 'volley', cavalry: 'charge' } as const
   const runAI = (dt: number) => {
     const b = d.battle
     if (b.phase !== 'deploy' && b.phase !== 'engage') return
@@ -139,7 +139,13 @@ async function main() {
     }
 
     aiTimer += dt
-    if (aiTimer > 3.5) { aiTimer = 0; const i = Math.floor(Math.random() * 4); useAbility(b, 'B', i, AB[i]) }
+    if (aiTimer > 3.5) { // 존재하는 병종 중 하나를 골라 해당 어빌리티(비표준 로스터 안전)
+      aiTimer = 0
+      const cs = b.units.B.cohorts
+      const i = Math.floor(Math.random() * cs.length)
+      const c = cs[i]
+      if (c) useAbility(b, 'B', i, ABILITY_FOR_KIND[c.kind])
+    }
   }
 
   // 액티브 포즈 토글(버튼 + space)

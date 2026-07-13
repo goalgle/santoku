@@ -137,7 +137,7 @@ export function useAbility(battle: Battle, side: Side, index: number, type: Abil
   const unit = battle.units[side]
   const c = unit.cohorts[index]
   const def = CONFIG.ability[type]
-  if (c.kind !== ABILITY_KIND[type] || c.aliveHP <= 0 || c.ability || c.stamina < def.cost || !canCommand(unit, c)) return false
+  if (!c || c.kind !== ABILITY_KIND[type] || c.aliveHP <= 0 || c.ability || c.stamina < def.cost || !canCommand(unit, c)) return false
   c.stamina -= def.cost
   c.ability = { type, timer: def.dur, phase: 'out', origin: { ...c.anchor }, path: [] }
   const foe = nearestEnemy(battle, side, c.anchor)
