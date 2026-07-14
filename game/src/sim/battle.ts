@@ -438,6 +438,10 @@ function stepRout(battle: Battle, dt: number): void {
     c.facing = dir < 0 ? Math.PI : 0 // 달아나는 방향
     c.target = null; c.ability = null; c.stance = 'idle'; c.chargeRun = false
   }
+  // 승리측: 진행 중 이동/어빌리티(돌진 귀환 등)는 계속 갱신 — 전투는 결정났으므로 melee/사기는 없음.
+  const winner = side === 'A' ? 'B' : 'A'
+  const wu = battle.units[winner]
+  for (const c of wu.cohorts) { stepAbility(c, dt); stepCohort(c, wu, dt) }
   if (battle.routTime >= CONFIG.routDuration) endBattle(battle)
 }
 

@@ -1,0 +1,24 @@
+- generic [active] [ref=f12e1]:
+  - button "⏸ 명령" [ref=f12e2]
+  - button "🗡 장수출전" [ref=f12e3]
+  - generic [ref=f12e4]:
+    - button "🛡 방어" [ref=f12e5]:
+      - text: 🛡
+      - text: 방어
+    - button "⚔ 공격" [ref=f12e6]:
+      - text: ⚔
+      - text: 공격
+    - button "🏹 일제사" [ref=f12e7]:
+      - text: 🏹
+      - text: 일제사
+    - button "🐎 돌진" [ref=f12e8]:
+      - text: 🐎
+      - text: 돌진
+  - generic [ref=f12e9]:
+    - generic [ref=f12e10]: 줌
+    - button "−" [ref=f12e11]
+    - button "＋" [ref=f12e12]
+  - generic [ref=f12e13]:
+    - generic [ref=f12e14]: 앵글
+    - button "−" [ref=f12e15]
+    - button "＋" [ref=f12e16]
