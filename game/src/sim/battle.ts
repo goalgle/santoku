@@ -498,12 +498,18 @@ export function step(battle: Battle, dtMs: number): void {
   let contact = false
   for (const ca of battle.units.A.cohorts) {
     for (const cb of battle.units.B.cohorts) {
-      const wMen = frontageOverlapMen(ca, cb, battle.terrain)
-      if (wMen <= 0) continue
+      const overlap = frontageOverlapMen(ca, cb, battle.terrain)
+      if (overlap <= 0) continue
       contact = true
       ca.inMelee = true; cb.inMelee = true
-      applyMelee(ca, cb, wMen, dt, battle.terrain)
-      applyMelee(cb, ca, wMen, dt, battle.terrain)
+      // 측면 초과 폭 보너스: 더 넓은(병력 많은) 대열이 좁은 적을 감싸 추가 공격폭 확보.
+      // 애로(choke)면 감쌀 공간이 없어 상한으로 제한.
+      const wa = activeWidthMen(ca), wb = activeWidthMen(cb)
+      const cap = battle.terrain.chokeWidth
+      const caW = Math.min(cap, overlap + CONFIG.flankBonus * Math.max(0, wa - wb))
+      const cbW = Math.min(cap, overlap + CONFIG.flankBonus * Math.max(0, wb - wa))
+      applyMelee(ca, cb, caW, dt, battle.terrain)
+      applyMelee(cb, ca, cbW, dt, battle.terrain)
     }
   }
   if (contact && battle.phase === 'deploy') battle.phase = 'engage'

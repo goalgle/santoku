@@ -14,6 +14,7 @@ export const CONFIG = {
   contactSlop: 20,         // 전면 접촉 판정 여유(px)
   attackUnit: 10,          // 폭 10명 = 공격 1단위
   damageScale: 6,          // 근접 피해 배율(잠정 — 튜닝 대상)
+  flankBonus: 0.5,         // 측면 초과 폭 보너스(임의 — 튜닝): 내 전면이 넓은 만큼 초과분×이 값이 추가 공격폭. 애로(choke)에선 제한
 
   // 궁병 사격 (doc/03 3.6.2, doc/07): 전열 병목 없이 사거리 내 전원 사격(정지 시만)
   rangeBase: 880,          // 사거리 배율 1.0 기준 px (넓은 시야 — 궁병 장거리)
