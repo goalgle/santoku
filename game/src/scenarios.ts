@@ -57,7 +57,7 @@ export const SCENARIOS: Record<string, Scenario> = {
     .name('조립 예시 (lab) — 기병 돌파')
     .terrain('plain')
     .addShield('left', 1000).addSpear('left', 600).addArcher('left', 400).addCavalry('left', 200)
-    .addShield('right', 1000).addArcher('right', 400).addCavalry('right', 200) // 창=0
+    .addShield('right', 1000).addSpear('right', 600).addArcher('right', 400).addCavalry('right', 200)
     .general('left', { might: 80 }).general('right', { might: 70 })
     .build(),
 }

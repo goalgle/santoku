@@ -26,10 +26,27 @@
                          border: none; color: #fff; background: rgba(0,0,0,.5); }
     #abilitybar button:disabled { opacity: .4; }
     #abilitybar button.active { outline: 3px solid #ffd24a; }
+    /* ===== TEST ONLY (나중에 삭제) — 상대(B) 병종 on/off ===== */
+    #testbar { position: fixed; left: 50%; top: 8px; transform: translateX(-50%); z-index: 20;
+               display: flex; gap: 6px; align-items: center; padding: 4px 8px;
+               background: rgba(0,0,0,.5); border: 1px dashed #888; border-radius: 8px; }
+    #testbar .t { color: #f99; font-size: 11px; }
+    #testbar button { height: 34px; min-width: 44px; font-size: 12px; border-radius: 6px; border: none;
+                      background: rgba(120,120,120,.5); color: #fff; }
+    #testbar button.on { background: rgba(80,170,90,.85); }
+    #testbar button.off { background: rgba(170,70,70,.7); text-decoration: line-through; }
   </style>
 </head>
 <body>
   <div id="hud"></div>
+  <!-- TEST ONLY (나중에 삭제) -->
+  <div id="testbar">
+    <span class="t">상대(B)</span>
+    <button id="tShield" class="on" data-kind="shield">방패</button>
+    <button id="tSpear" class="on" data-kind="spear">창</button>
+    <button id="tBow" class="on" data-kind="bow">궁</button>
+    <button id="tGeneral" class="on" data-kind="general">장수</button>
+  </div>
   <button id="pausebtn">⏸ 명령</button>
   <button id="generalbtn">🗡 장수출전</button>
   <div id="abilitybar">

@@ -89,6 +89,21 @@ async function main() {
   const genBtn = document.getElementById('generalbtn') as HTMLButtonElement | null
   genBtn?.addEventListener('click', () => toggleGeneral(d.battle, 'A'))
 
+  // ===== TEST ONLY (나중에 삭제): 상대(B) 병종 on/off 토글 =====
+  {
+    const B = d.battle.units.B
+    const origMen = new Map(B.cohorts.map((c) => [c.kind as string, c.aliveHP]))
+    for (const el of document.querySelectorAll<HTMLButtonElement>('#testbar button')) {
+      const kind = el.dataset.kind as string
+      el.addEventListener('click', () => {
+        const on = !el.classList.contains('on') // 현재 on이면 끔
+        el.classList.toggle('on', on); el.classList.toggle('off', !on)
+        if (kind === 'general') { B.general.state = on ? 'rest' : 'lost'; if (on) B.general.hp = B.general.maxHp }
+        else { const c = B.cohorts.find((x) => x.kind === kind); if (c) { c.aliveHP = on ? origMen.get(kind) ?? 0 : 0; c.woundedHP = 0 } }
+      })
+    }
+  }
+
   const arrows = new Arrows(tiltLayer) // 궁병 화살 연출(병사 위)
   const moraleGfx = new Graphics()
   tiltLayer.addChild(moraleGfx)
