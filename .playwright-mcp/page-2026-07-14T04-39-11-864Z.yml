@@ -1,0 +1,30 @@
+- generic [active] [ref=f29e1]:
+  - generic [ref=f29e2]:
+    - generic [ref=f29e3]: 상대(B)
+    - button "방패" [ref=f29e4]
+    - button "창" [ref=f29e5]
+    - button "궁" [ref=f29e6]
+    - button "장수" [ref=f29e7]
+  - button "⏸ 명령" [ref=f29e8]
+  - button "🗡 장수출전" [ref=f29e9]
+  - generic [ref=f29e10]:
+    - button "🛡 방어" [ref=f29e11]:
+      - text: 🛡
+      - text: 방어
+    - button "⚔ 공격" [ref=f29e12]:
+      - text: ⚔
+      - text: 공격
+    - button "🏹 일제사" [ref=f29e13]:
+      - text: 🏹
+      - text: 일제사
+    - button "🐎 돌진" [ref=f29e14]:
+      - text: 🐎
+      - text: 돌진
+  - generic [ref=f29e15]:
+    - generic [ref=f29e16]: 줌
+    - button "−" [ref=f29e17]
+    - button "＋" [ref=f29e18]
+  - generic [ref=f29e19]:
+    - generic [ref=f29e20]: 앵글
+    - button "−" [ref=f29e21]
+    - button "＋" [ref=f29e22]
