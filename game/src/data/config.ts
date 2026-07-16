@@ -33,6 +33,10 @@ export const CONFIG = {
   // 장수 (doc/07 7.1)
   duelBase: 9,             // 일기토 피해 배율(무력 기반)
   generalRange: 45,        // 장수 근접 교전 거리(px)
+  // 장수 ↔ 병사 전투 (③+⑤, 임의값 튜닝 대상)
+  generalDmgToSoldier: 40, // 장수→병사 사상/s (무력 100 기준, 무력 비례). 가장 가까운 적 1개 코호트
+  soldierDmgToGeneral: 15, // 병사(코호트)→장수 피해/s (공격 등급 비례, 감쇠 전). 접촉한 전 코호트 합산
+  generalDmgReduction: 0.2,// 병사 공격 감쇠 = 1/5 (신규)
   generalRegen: 12,        // 휴식 시 초당 HP 회복
   generalMoveSpeed: 100,   // 장수 이동(휴식 복귀)
   generalMeleeForMorale: 10, // 근접 지속 N초 → 사기 1회↑ (기본 규칙)

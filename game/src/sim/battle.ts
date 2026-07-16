@@ -65,6 +65,7 @@ function buildUnit(side: Side, spec: UnitSpec): Unit {
     pos: { ...spec.anchor },
     meleeTime: 0,
     boostGiven: false,
+    inCombat: false,
   }
   const flag: Flag = {
     pos: { ...spec.anchor },
@@ -373,6 +374,30 @@ function duel(attacker: Unit['general'], target: Unit['general'], dt: number): v
   target.hp -= CONFIG.duelBase * (attacker.might / 100) * dt // 무력 기반
 }
 
+/** 출진 장수 ↔ 적 병사 (③ 장수→병사 공격 · ⑤ 병사→장수 1/5 피해).
+ *  범위 내 가장 가까운 적 코호트 1개를 무력 기반으로 타격, 접촉한 모든 적 코호트에게서 피해(감쇠). */
+function generalVsCohorts(unit: Unit, enemy: Unit, dt: number): void {
+  const g = unit.general
+  if (g.state !== 'out') return
+  let nearest: Cohort | null = null
+  let nearD = Infinity
+  let incoming = 0
+  for (const c of enemy.cohorts) {
+    if (c.aliveHP <= 0) continue
+    const d = dist(g.pos, c.anchor) - frontExtent(c)
+    if (d > CONFIG.generalRange) continue
+    incoming += coef(TROOPS[c.kind].attack) // 병사→장수: 공격 등급 합산 (감쇠는 아래서)
+    if (d < nearD) { nearD = d; nearest = c }
+  }
+  if (nearest) {
+    g.inCombat = true
+    const dmg = Math.min(nearest.aliveHP, CONFIG.generalDmgToSoldier * (g.might / 100) * dt) // 장수→병사(무력)
+    nearest.aliveHP -= dmg
+    nearest.woundedHP += dmg * (1 - lethalityFrac('A')) // 장수 = 고치명(A)
+  }
+  if (incoming > 0) g.hp -= incoming * CONFIG.soldierDmgToGeneral * CONFIG.generalDmgReduction * dt // ⑤ 1/5 감쇠
+}
+
 /** 깃발 바로 뒤(적 반대쪽) 대기 위치 */
 function homePos(unit: Unit): Vec {
   const back = unit.side === 'A' ? -1 : 1
@@ -412,6 +437,10 @@ function handleGeneral(unit: Unit, enemy: Unit, dt: number): void {
 function stepGenerals(battle: Battle, dt: number): void {
   const A = battle.units.A, B = battle.units.B
   const gA = A.general, gB = B.general
+  gA.inCombat = false; gB.inCombat = false
+  // 장수 ↔ 적 병사 (③ 공격 · ⑤ 1/5 피해)
+  generalVsCohorts(A, B, dt)
+  generalVsCohorts(B, A, dt)
   // 일기토: 둘 다 출진 & 근거리
   if (gA.state === 'out' && gB.state === 'out' && dist(gA.pos, gB.pos) <= CONFIG.generalRange) {
     duel(gA, gB, dt); duel(gB, gA, dt)

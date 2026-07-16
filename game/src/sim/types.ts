@@ -42,6 +42,7 @@ export interface General {
   pos: Vec
   meleeTime: number   // 근접 지속 누적(초) → 사기↑ 조건
   boostGiven: boolean // 이번 전투 사기 buff 지급 여부
+  inCombat: boolean   // 이번 틱 병사/장수와 근접 교전 중 (렌더 공격 애니용)
 }
 
 /** 부대군기(= 깃발병). 이동 보병 1/2, 명령 반경, 파괴 가능. */

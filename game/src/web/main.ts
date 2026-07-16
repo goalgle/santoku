@@ -242,7 +242,8 @@ async function main() {
         gx = duelClear.cx + Math.cos(a) * 14
         gy = duelClear.cy + Math.sin(a) * 14
       }
-      const clip = duelClear && g.state === 'out' ? 'attack' : g.state === 'out' ? 'walk' : 'idle'
+      const fighting = (duelClear && g.state === 'out') || g.inCombat // 일기토 or 병사 교전
+      const clip = fighting ? 'attack' : g.state === 'out' ? 'walk' : 'idle'
       c.update(t.deltaMS, clip, gx, gy, u.side === 'A' ? 1 : -1)
     }
     // 장수 버튼: 출전(out)이면 '복귀'로 토글 표시, 부상·사망/종료면 비활성
