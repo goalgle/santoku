@@ -378,7 +378,8 @@ function duel(attacker: Unit['general'], target: Unit['general'], dt: number): v
  *  범위 내 가장 가까운 적 코호트 1개를 무력 기반으로 타격, 접촉한 모든 적 코호트에게서 피해(감쇠). */
 function generalVsCohorts(unit: Unit, enemy: Unit, dt: number): void {
   const g = unit.general
-  if (g.state !== 'out') return
+  const exposed = unitAlive(unit) <= 0 // 아군 전멸 → 노출: 무적 해제, 대기 중이어도 타겟
+  if (g.state !== 'out' && !exposed) return
   let nearest: Cohort | null = null
   let nearD = Infinity
   let incoming = 0
@@ -386,16 +387,20 @@ function generalVsCohorts(unit: Unit, enemy: Unit, dt: number): void {
     if (c.aliveHP <= 0) continue
     const d = dist(g.pos, c.anchor) - frontExtent(c)
     if (d > CONFIG.generalRange) continue
-    incoming += coef(TROOPS[c.kind].attack) // 병사→장수: 공격 등급 합산 (감쇠는 아래서)
+    incoming += coef(TROOPS[c.kind].attack) // 병사→장수: 공격 등급 합산 (감쇠/증폭은 아래서)
     if (d < nearD) { nearD = d; nearest = c }
   }
-  if (nearest) {
+  if (nearest && g.state === 'out') { // 출진 시에만 반격
     g.inCombat = true
     const dmg = Math.min(nearest.aliveHP, CONFIG.generalDmgToSoldier * (g.might / 100) * dt) // 장수→병사(무력)
     nearest.aliveHP -= dmg
     nearest.woundedHP += dmg * (1 - lethalityFrac('A')) // 장수 = 고치명(A)
   }
-  if (incoming > 0) g.hp -= incoming * CONFIG.soldierDmgToGeneral * CONFIG.generalDmgReduction * dt // ⑤ 1/5 감쇠
+  if (incoming > 0) {
+    g.inCombat = true
+    const mult = exposed ? CONFIG.generalExposedMult : CONFIG.generalDmgReduction // ⑤ 평소 1/5, 전멸 시 3배
+    g.hp = Math.max(0, g.hp - incoming * CONFIG.soldierDmgToGeneral * mult * dt)
+  }
 }
 
 /** 깃발 바로 뒤(적 반대쪽) 대기 위치 */
@@ -437,7 +442,6 @@ function handleGeneral(unit: Unit, enemy: Unit, dt: number): void {
 function stepGenerals(battle: Battle, dt: number): void {
   const A = battle.units.A, B = battle.units.B
   const gA = A.general, gB = B.general
-  gA.inCombat = false; gB.inCombat = false
   // 장수 ↔ 적 병사 (③ 공격 · ⑤ 1/5 피해)
   generalVsCohorts(A, B, dt)
   generalVsCohorts(B, A, dt)
@@ -471,6 +475,8 @@ function stepRout(battle: Battle, dt: number): void {
   const winner = side === 'A' ? 'B' : 'A'
   const wu = battle.units[winner]
   for (const c of wu.cohorts) { stepAbility(c, dt); stepCohort(c, wu, dt) }
+  // 전멸(노출)한 패배 장수는 도주 중에도 추격당함 (3배 피해)
+  generalVsCohorts(battle.units[side], wu, dt)
   if (battle.routTime >= CONFIG.routDuration) endBattle(battle)
 }
 
@@ -509,6 +515,7 @@ export function step(battle: Battle, dtMs: number): void {
     c.inMelee = false; c.firing = false
     c.slow = Math.max(0, c.slow - CONFIG.stopSlowDecay * dt) // 저지 저하 감쇠(이탈 시 회복). 접전 중이면 melee가 다시 갱신
   }
+  battle.units.A.general.inCombat = false; battle.units.B.general.inCombat = false
   if (battle.phase === 'ended') return
   if (battle.phase === 'rout') { stepRout(battle, dt); return }
 
@@ -552,10 +559,15 @@ export function step(battle: Battle, dtMs: number): void {
   if (casA > 0) dropMorale(battle.units.A, casA, dt)
   if (casB > 0) dropMorale(battle.units.B, casB, dt)
 
-  // 사기 0 → 도주
+  // 사기 0 또는 부대 전멸 → 도주(결착). 전멸측이 있으면 그쪽이 패배.
   const mA = battle.units.A.morale
   const mB = battle.units.B.morale
-  if (mA <= 0 || mB <= 0) startRout(battle, mA <= mB ? 'A' : 'B')
+  const aWiped = unitAlive(battle.units.A) <= 0
+  const bWiped = unitAlive(battle.units.B) <= 0
+  if (mA <= 0 || mB <= 0 || aWiped || bWiped) {
+    const loser: Side = aWiped && !bWiped ? 'A' : bWiped && !aWiped ? 'B' : mA <= mB ? 'A' : 'B'
+    startRout(battle, loser)
+  }
 }
 
 // --- 로깅/검증 헬퍼 ---

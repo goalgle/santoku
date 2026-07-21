@@ -37,6 +37,7 @@ export const CONFIG = {
   generalDmgToSoldier: 40, // 장수→병사 사상/s (무력 100 기준, 무력 비례). 가장 가까운 적 1개 코호트
   soldierDmgToGeneral: 15, // 병사(코호트)→장수 피해/s (공격 등급 비례, 감쇠 전). 접촉한 전 코호트 합산
   generalDmgReduction: 0.2,// 병사 공격 감쇠 = 1/5 (신규)
+  generalExposedMult: 3,   // 아군 전멸 시 장수 노출 → 감쇠 대신 3배 피해 + 대기 중에도 피격(타겟)
   generalRegen: 12,        // 휴식 시 초당 HP 회복
   generalMoveSpeed: 100,   // 장수 이동(휴식 복귀)
   generalMeleeForMorale: 10, // 근접 지속 N초 → 사기 1회↑ (기본 규칙)
