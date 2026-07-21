@@ -64,7 +64,6 @@ function buildUnit(side: Side, spec: UnitSpec): Unit {
     state: 'rest', // 시작: 깃발 뒤 대기(출전 명령 전까지)
     pos: { ...spec.anchor },
     meleeTime: 0,
-    boostGiven: false,
     inCombat: false,
   }
   const flag: Flag = {
@@ -395,6 +394,7 @@ function generalVsCohorts(unit: Unit, enemy: Unit, dt: number): void {
     const dmg = Math.min(nearest.aliveHP, CONFIG.generalDmgToSoldier * (g.might / 100) * dt) // 장수→병사(무력)
     nearest.aliveHP -= dmg
     nearest.woundedHP += dmg * (1 - lethalityFrac('A')) // 장수 = 고치명(A)
+    unit.morale = Math.min(100, unit.morale + CONFIG.generalMoraleRate * dt) // ④ 전진 공격 → 사기 지속↑
   }
   if (incoming > 0) {
     g.inCombat = true
@@ -449,12 +449,8 @@ function stepGenerals(battle: Battle, dt: number): void {
   if (gA.state === 'out' && gB.state === 'out' && dist(gA.pos, gB.pos) <= CONFIG.generalRange) {
     duel(gA, gB, dt); duel(gB, gA, dt)
     for (const u of [A, B]) {
-      const g = u.general
-      g.meleeTime += dt // 근접 지속 → 사기 1회↑ (기본 규칙)
-      if (!g.boostGiven && g.meleeTime >= CONFIG.generalMeleeForMorale) {
-        u.morale = Math.min(100, u.morale + CONFIG.generalMoraleBoost)
-        g.boostGiven = true
-      }
+      u.general.meleeTime += dt // 렌더 결투장 원 성장용
+      u.morale = Math.min(100, u.morale + CONFIG.generalMoraleRate * dt) // ④ 일기토도 전진 공격 → 사기 지속↑
     }
   }
   handleGeneral(A, B, dt)

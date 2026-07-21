@@ -40,8 +40,7 @@ export const CONFIG = {
   generalExposedMult: 3,   // 아군 전멸 시 장수 노출 → 감쇠 대신 3배 피해 + 대기 중에도 피격(타겟)
   generalRegen: 12,        // 휴식 시 초당 HP 회복
   generalMoveSpeed: 100,   // 장수 이동(휴식 복귀)
-  generalMeleeForMorale: 10, // 근접 지속 N초 → 사기 1회↑ (기본 규칙)
-  generalMoraleBoost: 5,
+  generalMoraleRate: 2,    // ④ 출진 장수가 공격 중(병사·일기토)이면 초당 사기↑ (지속)
   generalStandbyHp: 0.5,   // 종료 시 HP비 ≥ → 대기(재출전) / 미만 → 부상·사망
   generalSpace: 34,        // 아군 병사가 장수 주변에 두는 거리(렌더 — 존재감)
   generalHomeOffset: 46,   // 깃발 바로 뒤 대기 위치(적 반대쪽)

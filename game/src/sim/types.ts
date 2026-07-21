@@ -40,8 +40,7 @@ export interface General {
   maxHp: number
   state: GeneralState
   pos: Vec
-  meleeTime: number   // 근접 지속 누적(초) → 사기↑ 조건
-  boostGiven: boolean // 이번 전투 사기 buff 지급 여부
+  meleeTime: number   // 근접 지속 누적(초) → 렌더 결투장 원 성장용
   inCombat: boolean   // 이번 틱 병사/장수와 근접 교전 중 (렌더 공격 애니용)
 }
 
