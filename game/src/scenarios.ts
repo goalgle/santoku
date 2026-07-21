@@ -52,11 +52,11 @@ export const SCENARIOS: Record<string, Scenario> = {
     .build(),
 
   // 조립 DSL 예시(?s=lab): 여기 add* 만 바꿔가며 전술을 빠르게 테스트.
-  // 측면 공격 효율 테스트 — 창-only, A 2000 vs B 500. 다수(A)가 소수(B)를 감싸 미는지 관찰.
+  // 사기 관찰 테스트 — 완전 대칭(A=B, 창 1500). A 장수만 🗡출전시켜 A 사기가 B보다 오르는지 비교.
   lab: compose()
-    .name('측면 효율 — 창 2000 vs 500')
+    .name('사기 관찰 — 대칭 창 1500 vs 1500')
     .terrain('plain')
-    .addSpear('left', 2000)
-    .addSpear('right', 500)
+    .addSpear('left', 1500)
+    .addSpear('right', 1500)
     .build(),
 }
