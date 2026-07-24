@@ -420,11 +420,17 @@ function handleGeneral(unit: Unit, enemy: Unit, dt: number): void {
   const g = unit.general
   if (g.state === 'out') {
     if (g.hp <= 0) { g.hp = 0; g.state = 'rest'; g.meleeTime = 0; return } // HP 0 → 강제 복귀
-    // 출전: 적 장수 쪽으로 전진(일기토 추구)
-    const t = enemy.general.pos
-    const dx = t.x - g.pos.x, dy = t.y - g.pos.y, d = Math.hypot(dx, dy)
-    if (d > CONFIG.generalRange * 0.8) {
-      const s = Math.min(d, CONFIG.generalMoveSpeed * dt)
+    // 출전: 적 "최전방(가장 가까운) 코호트"로 전진해 교전 거리에서 멈춤(병사 뚫고 적 장수까지 가지 않음)
+    let target: Cohort | null = null
+    let nearD = Infinity
+    for (const c of enemy.cohorts) {
+      if (c.aliveHP <= 0) continue
+      const d = dist(g.pos, c.anchor) - frontExtent(c)
+      if (d < nearD) { nearD = d; target = c }
+    }
+    if (target && nearD > CONFIG.generalRange * 0.8) { // 교전 거리 밖이면 접근
+      const dx = target.anchor.x - g.pos.x, dy = target.anchor.y - g.pos.y, d = Math.hypot(dx, dy) || 1
+      const s = Math.min(nearD - CONFIG.generalRange * 0.8, CONFIG.generalMoveSpeed * dt)
       g.pos.x += (dx / d) * s; g.pos.y += (dy / d) * s
     }
   } else if (g.state === 'rest') {
