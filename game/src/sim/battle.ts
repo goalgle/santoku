@@ -473,6 +473,9 @@ function stepRout(battle: Battle, dt: number): void {
     c.facing = dir < 0 ? Math.PI : 0 // 달아나는 방향
     c.target = null; c.ability = null; c.stance = 'idle'; c.chargeRun = false
   }
+  // 패배 장수도 병사들과 함께 후퇴 (도주 방향으로 이동). 노출 시엔 추격당함(아래 generalVsCohorts)
+  const lg = battle.units[side].general
+  if (lg.state === 'out' || lg.state === 'rest') lg.pos.x += dir * CONFIG.routFleeSpeed * dt
   // 승리측: 진행 중 이동/어빌리티(돌진 귀환 등)는 계속 갱신 — 전투는 결정났으므로 melee/사기는 없음.
   const winner = side === 'A' ? 'B' : 'A'
   const wu = battle.units[winner]
