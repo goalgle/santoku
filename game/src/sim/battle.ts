@@ -227,10 +227,15 @@ function stepCohort(c: Cohort, unit: Unit, dt: number): void {
   } else if (c.kind === 'cavalry' && c.curSpeed > 0) {
     c.curSpeed = Math.max(0, c.curSpeed - moveSpeed * dt) // 정지 시 감속
   }
+  // spread(모임↔펼침) 갱신은 교전 판정 이후 stepSpread()에서 — 교전 중이면 즉시 펼침으로 복귀
+}
 
-  // 모임(이동) → 펼침(정지)
-  const targetSpread = c.target ? CONFIG.spreadMoving : CONFIG.spreadDeployed
-  c.spread += (targetSpread - c.spread) * Math.min(1, dt * CONFIG.spreadRate)
+/** 대열 폭 갱신: 이동 중=모임, 정지/교전 중=펼침. 교전(inMelee)이면 이동명령이 있어도 즉시 펼침 복귀 */
+function stepSpread(battle: Battle, dt: number): void {
+  for (const s of ['A', 'B'] as Side[]) for (const c of battle.units[s].cohorts) {
+    const targetSpread = c.target && !c.inMelee ? CONFIG.spreadMoving : CONFIG.spreadDeployed
+    c.spread += (targetSpread - c.spread) * Math.min(1, dt * CONFIG.spreadRate)
+  }
 }
 
 // --- 전투 (doc/03 3.6.2, 접전 폭 기하 doc/05 5.6.5) ---
@@ -391,6 +396,7 @@ function generalVsCohorts(unit: Unit, enemy: Unit, dt: number): void {
   }
   if (nearest && g.state === 'out') { // 출진 시에만 반격
     g.inCombat = true
+    nearest.inMelee = true // 장수와 교전 중 → 대열 유지(펼침)·공격 애니
     const dmg = Math.min(nearest.aliveHP, CONFIG.generalDmgToSoldier * (g.might / 100) * dt) // 장수→병사(무력)
     nearest.aliveHP -= dmg
     nearest.woundedHP += dmg * (1 - lethalityFrac('A')) // 장수 = 고치명(A)
@@ -557,6 +563,9 @@ export function step(battle: Battle, dtMs: number): void {
 
   // 장수: 일기토·휴식/리젠·근접 지속 사기 buff
   stepGenerals(battle, dt)
+
+  // 대열 폭: 교전 판정(melee·장수) 이후 갱신 — 교전 중이면 이동 대열변경 취소(펼침 복귀)
+  stepSpread(battle, dt)
 
   // 사기: 이번 틱 사상 기반 하락
   const casA = beforeA - unitAlive(battle.units.A)
